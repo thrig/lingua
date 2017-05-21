@@ -1,0 +1,73 @@
+#!/usr/bin/env perl
+#
+# Looks up toki pona dictionary words. There may be things to TWEAK.
+
+use 5.14.0;
+use warnings;
+use Getopt::Long qw(GetOptions);
+
+my $Default_Search = 'word';
+
+GetOptions(
+    'all|a'            => sub { $Default_Search = 'all' },
+    'definition|def|d' => sub { $Default_Search = 'definition' },
+    'help|h|?'         => \&emit_help,
+    'type|t'           => sub { $Default_Search = 'type' },
+) or exit 65;
+
+emit_help() unless @ARGV;
+
+my %dict;
+
+# TWEAK adjust this as necessary
+my $dict_file = "$ENV{HOME}/share/tpdict";
+
+open my $fh, '<', $dict_file or die "$0: could not open '$dict_file': $!\n";
+while ( readline $fh ) {
+    chomp;
+    my ( $words, $type, $definition ) = split /:/, $_, 3;
+    for my $w ( split /\|/, $words ) {
+        $dict{"$w-$type"} = {
+            all        => $_,
+            word       => $w,
+            type       => $type,
+            definition => $definition,
+        };
+    }
+}
+
+for my $word (@ARGV) {
+    my $search = $Default_Search;
+
+    # toki pona words are lower case; upper case indicates the second
+    # column with NOUN, VERB, etc. should instead be searched
+    if ( $search eq 'word' and $word =~ m/^[^A-Z]*[A-Z]/ ) {
+        $search = 'type';
+    }
+
+    for my $entry ( values %dict ) {
+        say join "\t", map { $entry->{$_} } qw/word definition type/
+          if $entry->{$search} =~ m/$word/;
+    }
+}
+
+sub emit_help {
+    warn <<"END_USAGE";
+Usage: nimi [options] search-regex [search-regex ..]
+
+Toki pona dictionary search. Options include:
+
+  -a   Apply search-regex to complete dictionary entry. 
+  -d   Only search the definition portion.
+  -t   Only search the type; NOTE that the type is upper case.
+
+The default search is made without any of the above conditions against
+the word field; this is a regular expression search so "^na" will find
+words beginning with those characters while "na" would find any
+containing those characters. A search that begins with an upper-case
+letter will instead search the type field, so "PRE" will return all pre-
+verbs and prepositions.
+
+END_USAGE
+    exit 64;
+}
