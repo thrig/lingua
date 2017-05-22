@@ -1,4 +1,4 @@
-a|kin:PARTICLE:emphasis, emotion, or confirmation
+a:PARTICLE:interjection, emotion word
 akesi:NOUN:non-cute animal; reptile, amphibian
 ala:ADJECTIVE:no, not, zero
 alasa:VERB:to hunt, forage
@@ -30,6 +30,8 @@ ken:ADJECTIVE:possible
 ken:PRE-VERB:to be able to, be allowed to, can, may
 kepeken:PREPOSITION:to use, with, by means of
 kili:NOUN:fruit, vegetable, mushroom
+kin:ADJECTIVE:indeed, emphasizes the word(s) before it
+kipisi:VERB:to cut
 kiwen:NOUN:hard object, metal, rock, stone
 ko:NOUN:clay, clinging form, dough, semi-solid, paste, powder
 kon:NOUN:air, breath; essence, spirit; hidden reality, unseen agent
@@ -53,8 +55,8 @@ lon:PREPOSITION:located at, present at, real, true, existing
 luka:NOUN:arm, hand, tactile organ
 luka:NUMBER:5
 lukin|oko:NOUN:eye
-lukin|oko:VERB:to look at, see, examine, observe, read, watch
 lukin|oko:PRE-VERB:to seek, look for, try to
+lukin|oko:VERB:to look at, see, examine, observe, read, watch
 lupa:NOUN:door, hole, orifice, window
 ma:NOUN:earth, land; outdoors, world; country, territory; soil
 mama:NOUN:parent, ancestor; creator, originator; caretaker, sustainer
@@ -69,8 +71,9 @@ mu:PARTICLE:animal noise or communication
 mun:NOUN:moon, night sky object, star
 musi:ADJECTIVE:artistic, entertaining, frivolous, playful, recreational
 mute:ADJECTIVE:many, a lot, more, much, several, very
-nanpa:PARTICLE:-th ordinal number
+namako:NOUN:extra, additional, spice
 nanpa:NOUN:numbers
+nanpa:PARTICLE:-th ordinal number
 nasa:ADJECTIVE:unusual, strange; foolish, crazy; drunk, intoxicated
 nasin:NOUN:way, custom, doctrine, method, path, road
 nena:NOUN:bump, button, hill, mountain, nose, protuberance
@@ -87,8 +90,8 @@ palisa:NOUN:long hard thing; branch, rod, stick
 pan:NOUN:cereal, grain; barley, corn, oat, rice, wheat; bread, pasta
 pana:VERB:to give, send, emit, provide, put, release
 pi:PARTICLE:of
-pilin:NOUN:heart (physical or emotional)
 pilin:ADJECTIVE:feeling (an emotion, a direct experience)
+pilin:NOUN:heart (physical or emotional)
 pimeja:ADJECTIVE:black, dark, unlit
 pini:ADJECTIVE:ago, completed, ended, finished, past
 pipi:NOUN:bug, insect, ant, spider
@@ -101,27 +104,27 @@ sama:PREPOSITION:like, as
 seli:ADJECTIVE:fire; cooking element, chemical reaction, heat source
 selo:NOUN:outer form, outer layer; bark, peel, shell, skin; boundary
 seme:PARTICLE:what? which?
-sewi:NOUN:area above, highest part, something elevated
 sewi:ADJECTIVE:awe-inspiring, divine, sacred, supernatural
+sewi:NOUN:area above, highest part, something elevated
 sijelo:NOUN:body (of person or animal), physical state, torso
-sike:NOUN:round or circular thing; ball, circle, cycle, sphere, wheel
 sike:ADJECTIVE:of one year
-sin|namako:ADJECTIVE:new, fresh; additional, another, extra
+sike:NOUN:round or circular thing; ball, circle, cycle, sphere, wheel
 sina:NOUN:you
 sinpin:NOUN:face, foremost, front, wall
+sin|namako:ADJECTIVE:new, fresh; additional, another, extra
 sitelen:NOUN:image, picture, representation, symbol, mark, writing
-sona:VERB:to know, be skilled in, be wise about, have information on
 sona:PRE-VERB:to know how to
+sona:VERB:to know, be skilled in, be wise about, have information on
 soweli:NOUN:animal, beast, land mammal
 suli:ADJECTIVE:big, heavy, large, long, tall; important; adult
 suno:NOUN:sun; light, brightness, glow, radiance, shine; light source
 supa:NOUN:horizontal surface, thing to put or rest something on
 suwi:ADJECTIVE:sweet, fragrant; cute, innocent, adorable
 tan:PREPOSITION:by, from, because of
-taso:PARTICLE:but, however
 taso:ADJECTIVE:only
-tawa:PREPOSITION:going to, toward; for; from the perspective of
+taso:PARTICLE:but, however
 tawa:ADJECTIVE:moving
+tawa:PREPOSITION:going to, toward; for; from the perspective of
 telo:NOUN:water, liquid, fluid, wet substance; beverage
 tenpo:NOUN:time, duration, moment, occasion, period, situation
 toki:VERB:to communicate, say, speak, say, talk, use language, think

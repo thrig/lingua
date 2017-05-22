@@ -1,0 +1,91 @@
+#!/usr/bin/env perl
+#
+# Lojban word lookup tool. Obtain XML dictionary from
+# http://jbovlaste.lojban.org and first foist that into a sqlite
+# database via lefanva.
+#
+# Lojban words may require proper quotation to protect them from shell
+# interpolation e.g.
+#
+#   mitysisku "filta'a"
+#   mitysisku filta\'a
+
+use 5.14.0;
+use warnings;
+use DBI;
+use Getopt::Long qw(GetOptions);
+
+# TWEAK
+my $DBFILE = "$ENV{HOME}/share/lojban/en.db";
+
+my $Flag_Method = 'LIKE';
+
+GetOptions(
+    'help|h|?'   => \&emit_help,
+    'like|l'     => sub { $Flag_Method = 'LIKE' },
+    'equal|eq|e' => sub { $Flag_Method = '=' },
+    'regex|r'    => sub { $Flag_Method = 'REGEXP' },
+) or exit 65;
+
+emit_help() unless @ARGV;
+
+my $word = shift;
+my $lang = shift // 'jbo';
+
+my $render_by = ( $lang eq 'en' ) ? \&render_en : \&render_jbo;
+
+my $dbh = DBI->connect( "dbi:SQLite:dbname=$DBFILE", "", "",
+    { AutoCommit => 0, RaiseError => 1, } );
+
+if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
+    $word = '%' . $word . '%';
+}
+
+my $source = $dbh->quote_identifier($lang);
+my $sth =
+  $dbh->prepare(
+    "SELECT * from $source WHERE word $Flag_Method ? ORDER BY word");
+$sth->execute($word);
+
+binmode *STDOUT, ':encoding(UTF-8)';
+
+while ( my $row = $sth->fetchrow_hashref ) {
+    $render_by->($row);
+}
+$dbh->rollback;
+$dbh->disconnect;
+exit;
+
+sub emit_help {
+    warn <<"END_USAGE";
+Usage: mitysisku [options] word [en|jbo]
+
+Lojban word lookup tool. Options include:
+
+  -l    Use LIKE for search (default; %word% unless [%_] present)
+  -e    Use = for search (exact)
+  -r    The 'word' is a REGEXP (slow)
+
+END_USAGE
+    exit 65;
+}
+
+sub render_en {
+    my ($row) = @_;
+    say join "\t", grep { defined } map { $row->{$_} } qw/word valsi sense/;
+}
+
+sub render_jbo {
+    my ($row) = @_;
+
+    say $row->{word} . "\n\t" . $row->{definition};
+    for my $field (qw/gloss notes/) {
+        say "\t" . uc($field) . " " . $row->{$field} if defined $row->{$field};
+    }
+    my @related = map { $_->[0] } @{
+        $dbh->selectall_arrayref( "SELECT rel from rel WHERE word = ? ORDER BY rel",
+            {}, $row->{word} )
+    };
+    say "\tRELAT @related" if @related;
+    print "\n";
+}

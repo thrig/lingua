@@ -1,0 +1,140 @@
+#!/usr/bin/env perl
+#
+# Translator for http://jbovlaste.lojban.org XML output into a SQLite
+# database for use by mitysisku e.g.
+#
+#   lefanva english2lojban.xml ~/share/lojban/en.db
+
+use 5.14.0;
+use warnings;
+use DBI;
+use List::Util 1.45 qw(uniq);
+use SQL::Abstract;
+use XML::Twig;
+
+#use Data::Dumper;
+#binmode *STDOUT, ':encoding(UTF-8)';
+
+emit_help() unless @ARGV;
+
+my $xmlfile = shift;
+my $dbfile  = shift;
+
+if ( !defined $dbfile ) {
+    $dbfile = $xmlfile =~ s/[^.]+$//r;
+    $dbfile .= 'db';
+}
+
+# updates are hard; wipe out anything prior in the output file
+unlink $dbfile;
+my $dbh = DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
+    { AutoCommit => 0, RaiseError => 1 } );
+dbinit();
+
+my $sql = SQL::Abstract->new;
+
+my $Commit_Count = 0;
+my $COMMIT_EVERY = 1000;
+
+# chunk parse only the bits we're interested in with wrapper sub to
+# handle the periodic commits
+XML::Twig->new(
+    twig_roots => {
+        nlword => sub { elementary( \&nlword, @_ ) },
+        valsi  => sub { elementary( \&valsi,  @_ ) },
+    }
+)->parsefile($xmlfile);
+
+$dbh->commit;
+$dbh->disconnect;
+
+exit;
+
+########################################################################
+#
+# SUBROUTINES
+
+sub dbinit {
+    while ( my $st = readline *DATA ) {
+        chomp $st;
+        $dbh->do($st);
+    }
+    $dbh->commit;
+}
+
+sub elementary {
+    my $handler = shift;
+    $Commit_Count += &$handler;
+    if ( $Commit_Count >= $COMMIT_EVERY ) {
+        $dbh->commit;
+        $Commit_Count = 0;
+    }
+    $_[0]->purge;
+}
+
+sub emit_help {
+    warn "Usage: lefanva jbovlaste.xml [dbfile]\n";
+    exit 65;
+}
+
+# these are just simple attribute lists ...
+#   <nlword word="checklist" valsi="zvaste" />
+sub nlword {
+    my ( $t, $elt ) = @_;
+    my ( $statement, @bind ) = $sql->insert( 'en', $elt->atts );
+    my $sth = $dbh->prepare($statement);
+    $sth->execute(@bind);
+    return 1;
+}
+
+# ... and these elements are fairly complicated
+sub valsi {
+    my ( $t, $elt ) = @_;
+    my $commits = 1;
+
+    my $attr = $elt->atts;    # word, type
+    delete $attr->{'unofficial'};
+
+    # on the untested assumption there's only one of these elements
+    for my $field (qw/definition definitionid notes/) {
+        my $text = $elt->first_child_trimmed_text($field);
+        $attr->{$field} = $text if $text ne '';
+    }
+
+    $attr->{username} = $elt->first_descendant('username')->trimmed_text;
+
+    my @glossen;
+    for my $gloss ( $elt->children('glossword') ) {
+        my $glword = $gloss->att('word');
+        my $sense  = $gloss->att('word');
+        if ( defined $sense and $sense ne $glword ) {
+            $glword .= ' (' . $sense . ')';
+        }
+        push @glossen, $glword;
+    }
+    $attr->{gloss} = join ', ', @glossen;
+
+    my ( $statement, @bind ) = $sql->insert( 'jbo', $attr );
+    my $sth = $dbh->prepare($statement);
+    $sth->execute(@bind);
+
+    if ( exists $attr->{notes} ) {
+        for my $rel ( uniq( $attr->{notes} =~ m/{([^}]+)/g ) ) {
+            my ( $st, @bind ) =
+              $sql->insert( 'rel', { word => $attr->{word}, rel => $rel } );
+            my $sth = $dbh->prepare($st);
+            $sth->execute(@bind);
+            $commits++;
+        }
+    }
+    return $commits;
+}
+
+# NOTE the various ->insert lines above must agree with these
+__DATA__
+CREATE TABLE en (word TEXT, valsi TEXT, sense TEXT, place INTEGER);
+CREATE TABLE jbo (word TEXT, definition TEXT, definitionid INTEGER, username TEXT, gloss TEXT, type TEXT, notes TEXT);
+CREATE TABLE rel (word TEXT, rel TEXT);
+CREATE INDEX enindex ON en (word);
+CREATE INDEX jboindex ON jbo (word);
+CREATE INDEX relindex ON rel (word);
