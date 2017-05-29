@@ -78,7 +78,7 @@ sub render_en {
 sub render_jbo {
     my ($row) = @_;
 
-    say $row->{word} . "\n\t" . $row->{definition};
+    say $row->{word} . "\t(" . $row->{type} . ")\n\t" . $row->{definition};
     for my $field (qw/gloss notes/) {
         say "\t" . uc($field) . " " . $row->{$field} if defined $row->{$field};
     }
