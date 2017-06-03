@@ -47,8 +47,6 @@ my $sth =
     "SELECT * from $source WHERE word $Flag_Method ? ORDER BY word");
 $sth->execute($word);
 
-binmode *STDOUT, ':encoding(UTF-8)';
-
 while ( my $row = $sth->fetchrow_hashref ) {
     $render_by->($row);
 }
