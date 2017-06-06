@@ -80,10 +80,11 @@ sub render_jbo {
     for my $field (qw/gloss notes/) {
         say "\t" . uc($field) . " " . $row->{$field} if defined $row->{$field};
     }
-    my @related = map { $_->[0] } @{
-        $dbh->selectall_arrayref( "SELECT rel from rel WHERE word = ? ORDER BY rel",
-            {}, $row->{word} )
-    };
-    say "\tRELAT @related" if @related;
+
+    my $related =
+      $dbh->selectcol_arrayref( "SELECT rel from rel WHERE word = ? ORDER BY rel",
+        {}, $row->{word} );
+    say "\tRELAT @$related" if @$related;
+
     print "\n";
 }
