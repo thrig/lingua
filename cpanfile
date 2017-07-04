@@ -2,7 +2,6 @@ requires 'App::Prove';
 requires 'DBD::SQLite';
 requires 'DBI';
 requires 'Getopt::Long';
-requires 'List::Util';
 requires 'Math::Random::Discrete';
 requires 'SQL::Abstract';
 requires 'Test::Cmd';

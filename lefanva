@@ -8,7 +8,6 @@
 use 5.14.0;
 use warnings;
 use DBI;
-use List::Util 1.45 qw(uniq);
 use SQL::Abstract;
 use XML::Twig;
 
@@ -92,8 +91,14 @@ sub valsi {
     my ( $t, $elt ) = @_;
     my $commits = 1;
 
-    my $attr = $elt->atts;    # word, type
-    delete $attr->{'unofficial'};
+    # the unofficial entries all have their type prefixed with
+    # 'experiemental' or 'obsolete' though the flag is databased for
+    # easy selection, if necessary
+    #  <valsi word="a" type="cmavo">
+    #  <valsi unofficial="true" word="a'au" type="experimental cmavo">
+    my $attr = $elt->atts;
+    $attr->{unofficial} =
+      ( exists $attr->{unofficial} and $attr->{unofficial} eq 'true' ) ? 1 : 0;
 
     # on the untested assumption there's only one of these elements
     for my $field (qw/definition definitionid notes/) {
@@ -103,10 +108,13 @@ sub valsi {
 
     $attr->{username} = $elt->first_descendant('username')->trimmed_text;
 
+    #  <glossword word="sumti or" />
+    #  <glossword word="and/or" sense="inclusive or" />
+    #  <glossword word="or" sense="inclusive or" />
     my @glossen;
     for my $gloss ( $elt->children('glossword') ) {
         my $glword = $gloss->att('word');
-        my $sense  = $gloss->att('word');
+        my $sense  = $gloss->att('sense');
         if ( defined $sense and $sense ne $glword ) {
             $glword .= ' (' . $sense . ')';
         }
@@ -119,7 +127,14 @@ sub valsi {
     $sth->execute(@bind);
 
     if ( exists $attr->{notes} ) {
-        for my $rel ( uniq( $attr->{notes} =~ m/{([^}]+)/g ) ) {
+        # some entries have a reference to the word itself e.g. 'lo':
+        #   <notes>Terminated with {ku}. Under the xorlo reform, {lo}
+        #   converts a selbri to a sumti in a generic way. In
+        #   particular, lo broda = {zo&apos;e} noi broda.</notes>
+        # so exclude those in addition to any duplicate references.
+        my %seen = ( $attr->{word} => 1 );
+        for my $rel ( $attr->{notes} =~ m/{([^}]+)/g ) {
+            next if $seen{$rel}++;
             my ( $st, @bind ) =
               $sql->insert( 'rel', { word => $attr->{word}, rel => $rel } );
             my $sth = $dbh->prepare($st);
@@ -133,7 +148,7 @@ sub valsi {
 # NOTE the various ->insert lines above must agree with these
 __DATA__
 CREATE TABLE en (word TEXT, valsi TEXT, sense TEXT, place INTEGER);
-CREATE TABLE jbo (word TEXT, definition TEXT, definitionid INTEGER, username TEXT, gloss TEXT, type TEXT, notes TEXT);
+CREATE TABLE jbo (definitionid INTEGER, unofficial INTEGER, word TEXT, definition TEXT, username TEXT, gloss TEXT, type TEXT, notes TEXT);
 CREATE TABLE rel (word TEXT, rel TEXT);
 CREATE INDEX enindex ON en (word);
 CREATE INDEX jboindex ON jbo (word);
