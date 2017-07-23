@@ -24,10 +24,13 @@ GetOptions(
     'help|h|?'   => \&emit_help,
     'like|l'     => sub { $Flag_Method = 'LIKE' },
     'equal|eq|e' => sub { $Flag_Method = '=' },
-    'regex|r'    => sub { $Flag_Method = 'REGEXP' },
+    'recurse|R+' => \my $Flag_Recurse,
+    'regex|re'   => sub { $Flag_Method = 'REGEXP' },
 ) or exit 65;
 
 emit_help() unless @ARGV;
+
+$Flag_Recurse //= 0;
 
 my $word = shift;
 my $lang = shift // 'jbo';
@@ -42,14 +45,9 @@ if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
 }
 
 my $source = $dbh->quote_identifier($lang);
-my $sth =
-  $dbh->prepare(
-    "SELECT * from $source WHERE word $Flag_Method ? ORDER BY word");
-$sth->execute($word);
 
-while ( my $row = $sth->fetchrow_hashref ) {
-    $render_by->($row);
-}
+search( $word, $Flag_Recurse );
+
 $dbh->rollback;
 $dbh->disconnect;
 exit;
@@ -71,6 +69,7 @@ END_USAGE
 sub render_en {
     my ($row) = @_;
     say join "\t", grep { defined } map { $row->{$_} } qw/word valsi sense/;
+    return;
 }
 
 sub render_jbo {
@@ -87,4 +86,30 @@ sub render_jbo {
     say "\tRELAT @$related" if @$related;
 
     print "\n";
+    return $related;
+}
+
+sub search {
+    my ( $word, $depth ) = @_;
+
+    state %seen;
+    $seen{$word}++;
+
+    my $sth =
+      $dbh->prepare(
+        "SELECT * from $source WHERE word $Flag_Method ? ORDER BY word");
+    $sth->execute($word);
+
+    my @more;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        my $related = $render_by->($row);
+        if ( $depth > 0 and $related ) {
+            for my $another (@$related) {
+                push @more, $another unless $seen{$another}++;
+            }
+        }
+    }
+    for my $another (@more) {
+        search( $another, $depth - 1 );
+    }
 }
