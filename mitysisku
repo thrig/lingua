@@ -10,8 +10,9 @@
 #   mitysisku "filta'a"
 #   mitysisku filta\'a
 
-use 5.14.0;
-use warnings;
+use strictures 2;
+use feature qw(say state);
+use Data::Dumper;
 use DBI;
 use Getopt::Long qw(GetOptions);
 
@@ -75,7 +76,9 @@ sub render_en {
 sub render_jbo {
     my ($row) = @_;
 
-    say $row->{word} . "\t(" . $row->{type} . ")\n\t" . $row->{definition};
+    say $row->{word} . "\t("
+      . $row->{type} . ")\n\t"
+      . ( $row->{definition} // '(no definition provided)' );
     for my $field (qw/gloss notes/) {
         say "\t" . uc($field) . " " . $row->{$field} if defined $row->{$field};
     }
@@ -102,11 +105,16 @@ sub search {
 
     my @more;
     while ( my $row = $sth->fetchrow_hashref ) {
-        my $related = $render_by->($row);
-        if ( $depth > 0 and $related ) {
-            for my $another (@$related) {
-                push @more, $another unless $seen{$another}++;
+        eval {
+            my $related = $render_by->($row);
+            if ( $depth > 0 and $related ) {
+                for my $another (@$related) {
+                    push @more, $another unless $seen{$another}++;
+                }
             }
+        };
+        if ($@) {
+            die "$@\n" . Data::Dumper->Dump( [$row], ['row'] );
         }
     }
     for my $another (@more) {
