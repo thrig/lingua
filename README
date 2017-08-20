@@ -10,3 +10,6 @@ You might spare yourself the inevitable with lojban given
         [$x_1$] learning too much, result under conditions $x_6$=$r_3$,
         too much by standard $x_7$=$d_3$
         (to want to stop learning Lojban because of learning it too much)
+
+see also the Lingua::Awkwords perl module which is a more complicated
+yet more flexible method to perform the same work as sitelen-sin.c
