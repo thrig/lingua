@@ -21,6 +21,7 @@ my $DBFILE = "$ENV{HOME}/share/lojban/en.db";
 
 my $Flag_Method = 'LIKE';
 
+Getopt::Long::Configure("bundling");
 GetOptions(
     'help|h|?'   => \&emit_help,
     'like|l'     => sub { $Flag_Method = 'LIKE' },
