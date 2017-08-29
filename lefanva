@@ -142,6 +142,16 @@ sub valsi {
             $commits++;
         }
     }
+
+    my @rafsi = $elt->children_text('rafsi');
+    for my $raf (@rafsi) {
+        my ( $st, @bind ) =
+          $sql->insert( 'rafsi', { word => $attr->{word}, rafsi => $raf } );
+        my $sth = $dbh->prepare($st);
+        $sth->execute(@bind);
+        $commits++;
+    }
+
     return $commits;
 }
 
@@ -150,6 +160,8 @@ __DATA__
 CREATE TABLE en (word TEXT, valsi TEXT, sense TEXT, place INTEGER);
 CREATE TABLE jbo (definitionid INTEGER, unofficial INTEGER, word TEXT, definition TEXT, username TEXT, gloss TEXT, type TEXT, notes TEXT);
 CREATE TABLE rel (word TEXT, rel TEXT);
+CREATE TABLE rafsi (word TEXT, rafsi TEXT);
 CREATE INDEX enindex ON en (word);
 CREATE INDEX jboindex ON jbo (word);
 CREATE INDEX relindex ON rel (word);
+CREATE INDEX rafsiindex ON rafsi (word);

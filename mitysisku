@@ -93,7 +93,14 @@ sub render_jbo {
     say $row->{word} . "\t("
       . $row->{type} . ")\n\t"
       . ( $row->{definition} // '(no definition provided)' );
-    for my $field (qw/gloss notes/) {
+
+    my $rafsi =
+      $dbh->selectcol_arrayref(
+        "SELECT rafsi from rafsi WHERE word = ? ORDER BY rafsi",
+        {}, $row->{word} );
+    $row->{rafsi} = join ' ', @$rafsi if @$rafsi;
+
+    for my $field (qw/gloss rafsi notes/) {
         say "\t" . uc($field) . " " . $row->{$field} if defined $row->{$field};
     }
 
