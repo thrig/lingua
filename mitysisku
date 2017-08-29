@@ -70,7 +70,20 @@ END_USAGE
 
 sub render_en {
     my ($row) = @_;
-    say join "\t", grep { defined } map { $row->{$_} } qw/word valsi sense/;
+
+    # include type so can e.g. easily identify gismu e.g. in a search
+    # for 'return' found 'klakla' but missed the simpler 'xruti'
+    $row->{type} = (
+        $dbh->selectcol_arrayref(
+            "SELECT type from jbo where word=? ",
+            {}, $row->{valsi}
+        )
+    )->[0];
+
+    $row->{sense} = $row->{sense} ? ' - ' . $row->{sense} : '';
+
+    say $row->{word}, $row->{sense}, ' - ', $row->{valsi}, ' (', $row->{type}, ')';
+
     return;
 }
 
