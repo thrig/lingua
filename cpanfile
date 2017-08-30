@@ -7,4 +7,5 @@ requires 'SQL::Abstract';
 requires 'Test::Cmd';
 requires 'Test::Most';
 requires 'Test::UnixExit';
+requires 'Text::Unidecode';
 requires 'XML::Twig';

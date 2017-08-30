@@ -1,0 +1,20 @@
+#!/usr/bin/env perl
+#
+# Requires http://espeak.sourceforge.net; this is for audio in anki
+# flashcards so my prononce does not drift too far off. Will require
+# modifications on not-OSX systems.
+
+use 5.14.0;
+use File::Spec ();
+use Text::Unidecode qw(unidecode);
+
+my $filename = unidecode("@ARGV");
+# ' -> h as that's how the pronounce works out and is nicer for filesystem
+tr/'/h/, s/[^A-Za-z0-9_-]//g, $_ = lc, $_ .= '.wav' for $filename;
+
+my $filepath = File::Spec->catfile( $ENV{HOME}, 'Desktop', $filename );
+
+system( qw(speak -v test/jbo -w), $filepath, @ARGV ) == 0
+  or die "speak failed: $?\n";
+
+system( 'afplay', $filepath );
