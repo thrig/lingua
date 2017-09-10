@@ -165,3 +165,4 @@ CREATE INDEX enindex ON en (word);
 CREATE INDEX jboindex ON jbo (word);
 CREATE INDEX relindex ON rel (word);
 CREATE INDEX rafsiindex ON rafsi (word);
+CREATE INDEX rafsirafindex ON rafsi (rafsi);

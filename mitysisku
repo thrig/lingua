@@ -39,6 +39,8 @@ my $lang = shift // 'jbo';
 
 my $render_by = ( $lang eq 'en' ) ? \&render_en : \&render_jbo;
 
+my $Words_Found = 0;
+
 my $dbh = DBI->connect( "dbi:SQLite:dbname=$DBFILE", "", "",
     { AutoCommit => 0, RaiseError => 1, } );
 
@@ -49,6 +51,22 @@ if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
 my $source = $dbh->quote_identifier($lang);
 
 search( $word, $Flag_Recurse );
+
+if ( $Words_Found == 0 and $lang eq 'jbo' ) {
+    # maybe it's a lujvo or something? (e.g. 'dramau' not in my
+    # dictionary copy at time of writing) TODO figure this out
+    if ( length $word > 4 ) {
+        ...;
+    }
+
+    # or if short enough, a rafsi?
+    if ( length $word == 3 or $word =~ m/^..'.$/ ) {
+        my $gismu = (
+            $dbh->selectcol_arrayref( "SELECT word from rafsi WHERE rafsi = ?", {}, $word )
+        )->[0];
+        search( $gismu, $Flag_Recurse ) if $gismu;
+    }
+}
 
 $dbh->rollback;
 $dbh->disconnect;
@@ -110,6 +128,7 @@ sub render_jbo {
     say "\tRELAT @$related" if @$related;
 
     print "\n";
+
     return $related;
 }
 
@@ -126,6 +145,7 @@ sub search {
 
     my @more;
     while ( my $row = $sth->fetchrow_hashref ) {
+        $Words_Found++;
         eval {
             my $related = $render_by->($row);
             if ( $depth > 0 and $related ) {
