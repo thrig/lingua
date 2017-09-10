@@ -72,6 +72,11 @@ $dbh->rollback;
 $dbh->disconnect;
 exit;
 
+sub bold {
+    my ($word) = @_;
+    return "\e[1m" . $word . "\e[0m";
+}
+
 sub emit_help {
     warn <<"END_USAGE";
 Usage: mitysisku [options] word [en|jbo]
@@ -100,7 +105,8 @@ sub render_en {
 
     $row->{sense} = $row->{sense} ? ' - ' . $row->{sense} : '';
 
-    say $row->{word}, $row->{sense}, ' - ', $row->{valsi}, ' (', $row->{type}, ')';
+    say $row->{word}, $row->{sense}, ' - ', bold( $row->{valsi} ), ' (',
+      $row->{type}, ')';
 
     return;
 }
@@ -108,7 +114,7 @@ sub render_en {
 sub render_jbo {
     my ($row) = @_;
 
-    say $row->{word} . "\t("
+    say bold( $row->{word} ) . "\t("
       . $row->{type} . ")\n\t"
       . ( $row->{definition} // '(no definition provided)' );
 
@@ -116,7 +122,9 @@ sub render_jbo {
       $dbh->selectcol_arrayref(
         "SELECT rafsi from rafsi WHERE word = ? ORDER BY rafsi",
         {}, $row->{word} );
-    $row->{rafsi} = join ' ', @$rafsi if @$rafsi;
+    if (@$rafsi) {
+        $row->{rafsi} = join ' ', map { bold($_) } @$rafsi;
+    }
 
     for my $field (qw/gloss rafsi notes/) {
         say "\t" . uc($field) . " " . $row->{$field} if defined $row->{$field};
@@ -125,7 +133,9 @@ sub render_jbo {
     my $related =
       $dbh->selectcol_arrayref( "SELECT rel from rel WHERE word = ? ORDER BY rel",
         {}, $row->{word} );
-    say "\tRELAT @$related" if @$related;
+    if (@$related) {
+        say "\tRELAT ", join ' ', map { bold($_) } @$related;
+    }
 
     print "\n";
 
