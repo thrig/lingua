@@ -53,24 +53,31 @@ my $source = $dbh->quote_identifier($lang);
 search( $word, $Flag_Recurse );
 
 if ( $Words_Found == 0 and $lang eq 'jbo' ) {
-    # maybe it's a lujvo or something? (e.g. 'dramau' not in my
-    # dictionary copy at time of writing) TODO figure this out
-    if ( length $word > 4 ) {
-        ...;
-    }
-
-    # or if short enough, a rafsi?
+    # maybe a rafsi?
     if ( length $word == 3 or $word =~ m/^..'.$/ ) {
         my $gismu = (
             $dbh->selectcol_arrayref( "SELECT word from rafsi WHERE rafsi = ?", {}, $word )
         )->[0];
-        search( $gismu, $Flag_Recurse ) if $gismu;
+        search( $gismu, 0 ) if $gismu;
+    }
+
+    # maybe it's a lujvo or something? (e.g. 'dramau' not in my
+    # dictionary copy at time of writing) TODO regex may need tweaks
+    if ( length $word > 4 ) {
+        for my $frag ( $word =~
+            m/([abcdefgijklmnoprstuvxz][abcdefgijklmnoprstuvxyz]'[abcdefgijklmnoprstuvxyz]|[abcdefgijklmnoprstuvxz][abcdefgijklmnoprstuvxyz]{2})/g
+          ) {
+            my $gismu = (
+                $dbh->selectcol_arrayref( "SELECT word from rafsi WHERE rafsi = ?", {}, $frag )
+            )->[0];
+            search( $gismu, 0 ) if $gismu;
+        }
     }
 }
 
 $dbh->rollback;
 $dbh->disconnect;
-exit;
+exit $Words_Found == 0 ? 1 : 0;
 
 sub bold {
     my ($word) = @_;
