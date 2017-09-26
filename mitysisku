@@ -3,12 +3,6 @@
 # Lojban word lookup tool. Obtain XML dictionary from
 # http://jbovlaste.lojban.org and first foist that into a sqlite
 # database via lefanva.
-#
-# Lojban words may require proper quotation to protect them from shell
-# interpolation e.g.
-#
-#   mitysisku "filta'a"
-#   mitysisku filta\'a
 
 use strictures 2;
 use feature qw(say state);
@@ -23,10 +17,10 @@ my $Flag_Method = 'LIKE';
 
 Getopt::Long::Configure("bundling");
 GetOptions(
-    'help|h|?'   => \&emit_help,
-    'like|l'     => sub { $Flag_Method = 'LIKE' },
     'equal|eq|e' => sub { $Flag_Method = '=' },
     'gismuify|g' => \my $Flag_Gismu,
+    'help|h|?'   => \&emit_help,
+    'like|l'     => sub { $Flag_Method = 'LIKE' },
     'recurse|R+' => \my $Flag_Recurse,
     'regex|re'   => sub { $Flag_Method = 'REGEXP' },
 ) or exit 65;
@@ -56,21 +50,24 @@ search( $word, $Flag_Recurse ) unless $Flag_Gismu;
 if ( $Words_Found == 0 and $lang eq 'jbo' ) {
     # maybe a rafsi?
     if ( length $word == 3 or $word =~ m/^..'.$/ ) {
-        my $gismu = (
-            $dbh->selectcol_arrayref( "SELECT word from rafsi WHERE rafsi = ?", {}, $word )
-        )->[0];
+        my $gismu = gismu_from_rafsi($word);
         search( $gismu, 0 ) if $gismu;
     }
 
-    # maybe it's a lujvo or something? (e.g. 'dramau' not in my
-    # dictionary copy at time of writing) TODO regex may need tweaks
+    # maybe it's a lujvo? (e.g. 'dramau' not in my dictionary copy at
+    # time of writing) TODO regex may need tweaks; TODO audit against
+    # lujvo (esp. any irregular ones) extant
     if ( length $word > 4 ) {
-        for my $frag ( $word =~
-            m/([abcdefgijklmnoprstuvxz][abcdefgijklmnoprstuvxyz]'[abcdefgijklmnoprstuvxyz]|[abcdefgijklmnoprstuvxz][abcdefgijklmnoprstuvxyz]{2})/g
+        for my $frag (
+            $word =~ m/(
+            # five-letter gismu
+            [bcdfgjklmnprstvxz][abcdefgijklmnoprstuvxz]{3}[aeiou]|
+            # ..'. rafsi form
+            [abcdefgijklmnoprstuvxz][abcdefgijklmnoprstuvxyz]'[abcdefgijklmnoprstuvxyz]|
+            # ... rafsi
+            [abcdefgijklmnoprstuvxz][abcdefgijklmnoprstuvxyz]{2})/gx
           ) {
-            my $gismu = (
-                $dbh->selectcol_arrayref( "SELECT word from rafsi WHERE rafsi = ?", {}, $frag )
-            )->[0];
+            my $gismu = length $frag == 5 ? $frag : gismu_from_rafsi($frag);
             search( $gismu, 0 ) if $gismu;
         }
     }
@@ -111,6 +108,14 @@ codes used.
 
 END_USAGE
     exit 65;
+}
+
+sub gismu_from_rafsi {
+    my ($word) = @_;
+    my $gismu = (
+        $dbh->selectcol_arrayref( "SELECT word from rafsi WHERE rafsi = ?", {}, $word )
+    )->[0];
+    return $gismu;
 }
 
 sub render_en {

@@ -1,0 +1,84 @@
+.Dd September 26 2017
+.Dt MITYSISKU 1
+.nh
+.Os
+.Sh NAME
+.Nm mitysisku
+.Nd lojban dictionary search
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Op Fl e
+.Op Fl g
+.Op Fl l
+.Op Fl R
+.Ar word
+.Op Ar en|jbo
+.Ek
+.Sh DESCRIPTION
+.Nm
+performs lojban dictionary searches. By default lojban words are
+searched for; append
+.Ar en
+to instead search for
+.Ar word
+in the English-to-Lojban dictionary.
+Options:
+.Bl -tag -width -indent
+.It Fl e
+Exact
+.Ar word
+search.
+.It Fl g
+Attempt a gismu lookup of rafsi or gismu that may be present in the
+.Ar word .
+.It Fl l
+Use a
+.Cm LIKE
+.Ar word
+search. This is the default, and is done as
+.Cm %word%
+unless the
+.Ar word
+contains the
+.Cm [_
+characters, in which case that exact string will be used.
+.It Fl R
+Recurse; additionally looks up related words to the given
+.Ar word .
+Repeat this flag to increase the recursion depth. A gismu search
+.Fl g
+disables recursion.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+Exact lookup on
+.Ar la'o
+as otherwise the default
+.Cm LIKE
+search finds too many false positives.
+.Pp
+.Dl $ Ic mitysisku -e \&"la'o\&"
+.Pp
+Recursive search on anything containing
+.Ar tricu
+and also any related terms to those hits. Send to pager with support for
+terminal escape codes.
+.Pp
+.Dl $ Ic mitysisku -R tricu \&| less -R
+.Pp
+The difference between a gismu and not-gismu search may be illustrated
+by...look, squirrel!
+.Pp
+.Dl $ Ic mitysisku ricyratcu
+.Dl ...
+.Dl $ Ic mitysisku -g ricyratcu
+.Sh SEE ALSO
+.Cm lefanva
+will be necessary to convert the XML dictionary to a format
+.Nm
+can consume; this utility also contains the database schema if one wants
+to directly access that via SQL.
+.Sh AUTHOR
+.An Jeremy Mates
