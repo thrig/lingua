@@ -20,6 +20,7 @@ GetOptions(
     'equal|eq|e' => sub { $Flag_Method = '=' },
     'gismuify|g' => \my $Flag_Gismu,
     'help|h|?'   => \&emit_help,
+    'hify|H'     => \my $Flag_Hify,
     'like|l'     => sub { $Flag_Method = 'LIKE' },
     'recurse|R+' => \my $Flag_Recurse,
     'regex|re'   => sub { $Flag_Method = 'REGEXP' },
@@ -32,7 +33,19 @@ $Flag_Recurse //= 0;
 my $word = shift;
 my $lang = shift // 'jbo';
 
-my $render_by = ( $lang eq 'en' ) ? \&render_en : \&render_jbo;
+my $render_by;
+
+if ( $lang eq 'en' ) {
+    $render_by = \&render_en;
+} else {
+    $render_by = \&render_jbo;
+
+    # treat "h" in input same as "'" as h is easier for me to type and
+    # is more or less the same sound as what ' represents and other
+    # lojban folks indicate they use this convention; use the hify flag
+    # to try to mend ' to h in the output.
+    $word =~ tr/h/'/;
+}
 
 my $Words_Found = 0;
 
@@ -118,6 +131,12 @@ sub gismu_from_rafsi {
     return $gismu;
 }
 
+sub hify {
+    my ($word) = @_;
+    return $word unless $Flag_Hify;
+    $word =~ tr/'/h/r;
+}
+
 sub render_en {
     my ($row) = @_;
 
@@ -132,7 +151,7 @@ sub render_en {
 
     $row->{sense} = $row->{sense} ? ' - ' . $row->{sense} : '';
 
-    say $row->{word}, $row->{sense}, ' - ', bold( $row->{valsi} ), ' (',
+    say $row->{word}, $row->{sense}, ' - ', bold( hify( $row->{valsi} ) ), ' (',
       $row->{type}, ')';
 
     return;
@@ -141,7 +160,7 @@ sub render_en {
 sub render_jbo {
     my ($row) = @_;
 
-    say bold( $row->{word} ) . "\t("
+    say bold( hify( $row->{word} ) ) . "\t("
       . $row->{type} . ")\n\t"
       . ( $row->{definition} // '(no definition provided)' );
 
@@ -161,7 +180,7 @@ sub render_jbo {
       $dbh->selectcol_arrayref( "SELECT rel from rel WHERE word = ? ORDER BY rel",
         {}, $row->{word} );
     if (@$related) {
-        say "\tRELAT ", join ' ', map { bold($_) } @$related;
+        say "\tRELAT ", join ' ', map { bold( hify($_) ) } @$related;
     }
 
     print "\n";

@@ -1,4 +1,4 @@
-.Dd September 26 2017
+.Dd September 29 2017
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -10,6 +10,7 @@
 .Bk -words
 .Op Fl e
 .Op Fl g
+.Op Fl H
 .Op Fl l
 .Op Fl R
 .Ar word
@@ -32,6 +33,12 @@ search.
 .It Fl g
 Attempt a gismu lookup of rafsi or gismu that may be present in the
 .Ar word .
+.It Fl H
+Replaces \&' with \&h in lojban words (except not in the free-form NOTES
+or word definition fields). Input accepts both forms, and will be
+translated to \&' before the search is made.
+.Pp
+This is a not official extension to the language.
 .It Fl l
 Use a
 .Cm LIKE
@@ -57,9 +64,13 @@ Exact lookup on
 .Ar la'o
 as otherwise the default
 .Cm LIKE
-search finds too many false positives.
+search finds too many false positives
 .Pp
 .Dl $ Ic mitysisku -e \&"la'o\&"
+.Pp
+or to avoid the need to quote input via a non-official form,
+.Pp
+.Dl $ Ic mitysisku -H -e laho
 .Pp
 Recursive search on anything containing
 .Ar tricu
