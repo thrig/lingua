@@ -13,7 +13,7 @@ GetOptions(
     'definition|def|d' => sub { $Default_Search = 'definition' },
     'help|h|?'         => \&emit_help,
     'type|t'           => sub { $Default_Search = 'type' },
-) or exit 65;
+) or exit 64;
 
 emit_help() unless @ARGV;
 

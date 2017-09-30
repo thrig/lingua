@@ -24,7 +24,7 @@ GetOptions(
     'like|l'     => sub { $Flag_Method = 'LIKE' },
     'recurse|R+' => \my $Flag_Recurse,
     'regex|re'   => sub { $Flag_Method = 'REGEXP' },
-) or exit 65;
+) or exit 64;
 
 emit_help() unless @ARGV;
 
@@ -120,7 +120,7 @@ Piping to less(1) may require `less -R` due to the terminal escape
 codes used.
 
 END_USAGE
-    exit 65;
+    exit 64;
 }
 
 sub gismu_from_rafsi {

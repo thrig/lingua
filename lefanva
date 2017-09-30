@@ -73,7 +73,7 @@ sub elementary {
 
 sub emit_help {
     warn "Usage: lefanva jbovlaste.xml [dbfile]\n";
-    exit 65;
+    exit 64;
 }
 
 # these are just simple attribute lists ...

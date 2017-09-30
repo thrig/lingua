@@ -27,7 +27,7 @@ my $wordlist = 'basic';
 GetOptions(
     'help|h|?'     => \&emit_help,
     'wordlist|w=s' => \$wordlist,
-) or exit 65;
+) or exit 64;
 
 die "sapgli: no such wordlist '$wordlist' (basic|combined|voa)\n"
   unless exists $patterns{$wordlist};
@@ -49,7 +49,7 @@ particular word list, one of basic (the default) or combined or voa.
   ... | sapgli -w combined | less -R
 
 END_USAGE
-    exit 65;
+    exit 64;
 }
 
 sub hilight {

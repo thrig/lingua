@@ -21,7 +21,7 @@ GetOptions(
     'lines|l=i'   => \my $Flag_Lines,
     'order|o=i'   => \my $Flag_Order,
     'help|h|?'    => \&emit_help,
-) or exit 65;
+) or exit 64;
 
 $Flag_Columns = 23 if !defined $Flag_Columns or $Flag_Columns < 1;
 $Flag_Lines   = 78 if !defined $Flag_Lines   or $Flag_Lines < 1;
