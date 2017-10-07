@@ -1,4 +1,4 @@
-.Dd September 29 2017
+.Dd October  6 2017
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -29,14 +29,21 @@ Options:
 .It Fl e
 Exact
 .Ar word
-search.
+search. Not enabled by default, unless the
+.Fl g
+flag is used.
 .It Fl g
-Attempt a gismu lookup of rafsi or gismu that may be present in the
+Attempts a gismu lookup of all the gismu or rafsi that may be
+present in the
 .Ar word .
+This disables recursion and performs an exact word search. This flag is
+ignored when searching the English dictionary via
+.Ar en .
 .It Fl H
-Replaces \&' with \&h in lojban words (except not in the free-form NOTES
-or word definition fields). Input accepts both forms, and will be
-translated to \&' before the search is made.
+Replaces \&' with \&h in lojban words printed by this program
+(except not in the free-form NOTES or word definition fields). Input
+always accepts both forms; input will be translated to \&' before
+the search is made.
 .Pp
 This is a not official extension to the language.
 .It Fl l
@@ -55,7 +62,9 @@ Recurse; additionally looks up related words to the given
 .Ar word .
 Repeat this flag to increase the recursion depth. A gismu search
 .Fl g
-disables recursion.
+disables recursion. An
+.Ar en
+dictionary lookup likewise disables recursion.
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -68,7 +77,11 @@ search finds too many false positives
 .Pp
 .Dl $ Ic mitysisku -e \&"la'o\&"
 .Pp
-or to avoid the need to quote input via a non-official form,
+or to avoid the need to shell quote the input
+.Pp
+.Dl $ Ic mitysisku -e laho
+.Pp
+or to depart from official form in the output
 .Pp
 .Dl $ Ic mitysisku -H -e laho
 .Pp

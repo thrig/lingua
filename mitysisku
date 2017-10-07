@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
 #
-# Lojban word lookup tool. Obtain XML dictionary from
+# lojban word lookup tool. obtain XML dictionary from
 # http://jbovlaste.lojban.org and first foist that into a sqlite
-# database via lefanva.
+# database via lefanva
 
 use strictures 2;
 use feature qw(say state);
@@ -10,7 +10,6 @@ use Data::Dumper;
 use DBI;
 use Getopt::Long qw(GetOptions);
 
-# TWEAK
 my $DBFILE = "$ENV{HOME}/share/lojban/en.db";
 
 my $Flag_Method = 'LIKE';
@@ -23,76 +22,151 @@ GetOptions(
     'hify|H'     => \my $Flag_Hify,
     'like|l'     => sub { $Flag_Method = 'LIKE' },
     'recurse|R+' => \my $Flag_Recurse,
-    'regex|re'   => sub { $Flag_Method = 'REGEXP' },
 ) or exit 64;
-
-emit_help() unless @ARGV;
 
 $Flag_Recurse //= 0;
 
-my $word = shift;
-my $lang = shift // 'jbo';
+my $The_Word = shift // emit_help();
+my $lang     = shift // 'jbo';
 
 my $render_by;
 
 if ( $lang eq 'en' ) {
-    $render_by = \&render_en;
-} else {
+    $render_by    = \&render_en;
+    $Flag_Gismu   = 0;
+    $Flag_Recurse = 0;
+} elsif ( $lang eq 'jbo' ) {
     $render_by = \&render_jbo;
-
     # treat "h" in input same as "'" as h is easier for me to type and
     # is more or less the same sound as what ' represents and other
     # lojban folks indicate they use this convention; use the hify flag
-    # to try to mend ' to h in the output.
-    $word =~ tr/h/'/;
+    # to try to mend ' to h in the output
+    $The_Word =~ tr/h/'/;
+} else {
+    die "mitysisku: unknown language '$lang' (use en|jbo)\n";
 }
 
 my $Words_Found = 0;
 
-my $dbh = DBI->connect( "dbi:SQLite:dbname=$DBFILE", "", "",
+my $Db_H = DBI->connect( "dbi:SQLite:dbname=$DBFILE", "", "",
     { AutoCommit => 0, RaiseError => 1, } );
 
-if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
-    $word = '%' . $word . '%';
-}
+my $source = $Db_H->quote_identifier($lang);
 
-my $source = $dbh->quote_identifier($lang);
-
-search( $word, $Flag_Recurse ) unless $Flag_Gismu;
+search( $The_Word, $Flag_Recurse ) unless $Flag_Gismu;
 
 if ( $Words_Found == 0 and $lang eq 'jbo' ) {
-    # maybe a rafsi?
-    if ( length $word == 3 or $word =~ m/^..'.$/ ) {
-        my $gismu = gismu_from_rafsi($word);
-        search( $gismu, 0 ) if $gismu;
-    }
+    $Flag_Method  = '=';
+    $Flag_Recurse = 0;
 
-    # maybe it's a lujvo? (e.g. 'dramau' not in my dictionary copy at
-    # time of writing) TODO regex may need tweaks; TODO audit against
-    # lujvo (esp. any irregular ones) extant
-    if ( length $word > 4 ) {
-        for my $frag (
-            $word =~ m/(
-            # five-letter gismu
-            [bcdfgjklmnprstvxz][abcdefgijklmnoprstuvxz]{3}[aeiou]|
-            # ..'. rafsi form
-            [abcdefgijklmnoprstuvxz][abcdefgijklmnoprstuvxyz]'[abcdefgijklmnoprstuvxyz]|
-            # ... rafsi
-            [abcdefgijklmnoprstuvxz][abcdefgijklmnoprstuvxyz]{2})/gx
-          ) {
-            my $gismu = length $frag == 5 ? $frag : gismu_from_rafsi($frag);
-            search( $gismu, 0 ) if $gismu;
-        }
+    # maybe a rafsi?
+    if ( length $The_Word == 3 or $The_Word =~ m/^..'.$/ ) {
+        my $gismu = gismu_from_rafsi($The_Word);
+        search( $gismu, $Flag_Recurse ) if $gismu;
+    } elsif ( length $The_Word > 4 ) {
+        # lujvo must be at least six characters but need to support
+        # exactly five if the user gave us a gismu here
+        decompose($The_Word);
     }
 }
 
-$dbh->rollback;
-$dbh->disconnect;
+END {
+    if ($Db_H) {
+        $Db_H->rollback;
+        $Db_H->disconnect;
+    }
+}
 exit $Words_Found == 0 ? 1 : 0;
 
 sub bold {
     my ($word) = @_;
     return "\e[1m" . $word . "\e[0m";
+}
+
+sub decompose {
+    my ($word) = @_;
+
+    # NOTE this and subsequent CC are sloppy; there are restrictions on
+    # consonant pairs CVCCV and more restrictions on leading consonant
+    # pairs CCVCV
+    my $gismu_re = qr{
+      [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou] |
+      [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz][aeiou]
+    }x;
+
+    my @words;
+
+    # maybe one or more short-form rafsi (CVC, CCV, CVV (and CVV may
+    # appear as sa'i or sai)) or 4-letter rafsi (CCVC, CVCC e.g.
+    # gismu) and these may be stuck together with one of [nry]. CVC
+    # cannot appear in tail position (lujvo must end with a vowel)
+    my $prev_match = 0;
+  LOOP: {
+        # tail CCV, CVV, or a full gismu. however! cmevla can end with a
+        # consonant, so must support parsing those as well; this adds
+        # CVC and 4-letter rafsi forms as possible tails, I think
+        if ($word =~ m{\G
+           ($gismu_re |                                         # lujvo
+            # cmevla
+            [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz] |
+            [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz][bcdfgjklmnprstvxz] |
+            [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou] |     # lujvo    
+            [bcdfgjklmnprstvxz][aeiou][aeiou] |                 # lujvo
+            [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz] )     # cmevla
+            \z
+        }cgx
+          ) {
+            maybe_push_rafsi( \@words, $1 );
+            last LOOP;
+        }
+
+        # CVC may and CCVC, CVCC must have -y-
+        if ($word =~ m{\G
+           ([bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz] |
+            [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz][bcdfgjklmnprstvxz] |
+            [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz])
+            y
+            (?=[bcdfgjklmnprstvxz])
+         }cgx
+          ) {
+            my $rafsi = $1;
+            $prev_match = length($rafsi) + 1;
+            maybe_push_rafsi( \@words, $rafsi );
+            redo LOOP;
+        }
+
+        # CVV may have -r- or -n- to join it with next
+        if ($word =~ m{\G
+           ([bcdfgjklmnprstvxz][aeiou]'[aeiou] |
+            [bcdfgjklmnprstvxz][aeiou][aeiou] )
+            [rn]
+           (?=[bcdfgjklmnprstvxz])
+        }cgx
+          ) {
+            my $rafsi = $1;
+            $prev_match = length($rafsi) + 1;
+            maybe_push_rafsi( \@words, $rafsi );
+            redo LOOP;
+        }
+
+        # CVC and CCV can be directly joined
+        if ($word =~ m{\G
+           ([bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz] |
+           [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou])
+           (?=[bcdfgjklmnprstvxz])
+        }cgx
+          ) {
+            my $rafsi = $1;
+            $prev_match = length($rafsi);
+            maybe_push_rafsi( \@words, $rafsi );
+            redo LOOP;
+        }
+
+        die "mitysisku: unparsable input '$The_Word'\n",
+          " " x ( pos // 0 + $prev_match + 29 ), "^\n";
+    }
+
+    search( $_, $Flag_Recurse ) for @words;
 }
 
 sub emit_help {
@@ -103,7 +177,6 @@ Lojban word lookup tool. Options include:
 
   -e    Use = for search (exact)
   -l    Use LIKE for search (default; %word% unless [%_] present)
-  -re   The 'word' is a REGEXP (slow)
 
   -g    Gismuify: only attempts to lookup gismu via rafsi of the input
         (this happens by default if nothing else in the dictionary
@@ -125,9 +198,27 @@ END_USAGE
 
 sub gismu_from_rafsi {
     my ($word) = @_;
-    my $gismu = (
-        $dbh->selectcol_arrayref( "SELECT word from rafsi WHERE rafsi = ?", {}, $word )
-    )->[0];
+    my $gismu;
+    if ( length $word == 5 ) {
+        $gismu = (
+            $Db_H->selectcol_arrayref( "SELECT word from jbo WHERE word = ?", {}, $word ) )
+          ->[0];
+    } elsif ( length $word == 4 and $word !~ m/'/ ) {
+        # truncated gismu aka 4-letter rafsi?
+        $gismu = (
+            $Db_H->selectcol_arrayref(
+                "SELECT word from jbo WHERE word LIKE ?",
+                {}, $word . '_'
+            )
+        )->[0];
+    } else {
+        # assume a CCV, CVC or CVV form
+        $gismu = (
+            $Db_H->selectcol_arrayref(
+                "SELECT word from rafsi WHERE rafsi = ?", {}, $word
+            )
+        )->[0];
+    }
     return $gismu;
 }
 
@@ -137,14 +228,22 @@ sub hify {
     $word =~ tr/'/h/r;
 }
 
+sub maybe_push_rafsi {
+    my ( $aref, $rafsi ) = @_;
+    my $gismu = gismu_from_rafsi($rafsi);
+    die "mitysisku: unknown rafsi '$rafsi' in '$The_Word'\n"
+      unless defined $gismu;
+    push @$aref, $gismu;
+}
+
 sub render_en {
     my ($row) = @_;
 
     # include type so can e.g. easily identify gismu e.g. in a search
     # for 'return' found 'klakla' but missed the simpler 'xruti'
     $row->{type} = (
-        $dbh->selectcol_arrayref(
-            "SELECT type from jbo where word=? ",
+        $Db_H->selectcol_arrayref(
+            "SELECT type from jbo where word=?",
             {}, $row->{valsi}
         )
     )->[0];
@@ -165,7 +264,7 @@ sub render_jbo {
       . ( $row->{definition} // '(no definition provided)' );
 
     my $rafsi =
-      $dbh->selectcol_arrayref(
+      $Db_H->selectcol_arrayref(
         "SELECT rafsi from rafsi WHERE word = ? ORDER BY rafsi",
         {}, $row->{word} );
     if (@$rafsi) {
@@ -177,7 +276,7 @@ sub render_jbo {
     }
 
     my $related =
-      $dbh->selectcol_arrayref( "SELECT rel from rel WHERE word = ? ORDER BY rel",
+      $Db_H->selectcol_arrayref( "SELECT rel from rel WHERE word = ? ORDER BY rel",
         {}, $row->{word} );
     if (@$related) {
         say "\tRELAT ", join ' ', map { bold( hify($_) ) } @$related;
@@ -195,8 +294,12 @@ sub search {
     $seen{$word}++;
 
     my $sth =
-      $dbh->prepare(
+      $Db_H->prepare(
         "SELECT * from $source WHERE word $Flag_Method ? ORDER BY word");
+
+    if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
+        $word = '%' . $word . '%';
+    }
     $sth->execute($word);
 
     my @more;
@@ -211,7 +314,7 @@ sub search {
             }
         };
         if ($@) {
-            die "$@\n" . Data::Dumper->Dump( [$row], ['row'] );
+            die "mitysisku: $@\n" . Data::Dumper->Dump( [$row], ['row'] );
         }
     }
     for my $another (@more) {
