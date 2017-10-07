@@ -43,7 +43,7 @@ if ( $lang eq 'en' ) {
     # to try to mend ' to h in the output
     $The_Word =~ tr/h/'/;
 } else {
-    die "mitysisku: unknown language '$lang' (use en|jbo)\n";
+    die "mitysisku: unknown language |$lang| (use en|jbo)\n";
 }
 
 my $Words_Found = 0;
@@ -111,7 +111,7 @@ sub decompose {
             [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz] |
             [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz][bcdfgjklmnprstvxz] |
             [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou] |     # lujvo    
-            [bcdfgjklmnprstvxz][aeiou][aeiou] |                 # lujvo
+            [bcdfgjklmnprstvxz][aeiou]'?[aeiou] |               # lujvo
             [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz] )     # cmevla
             \z
         }cgx
@@ -130,21 +130,19 @@ sub decompose {
          }cgx
           ) {
             my $rafsi = $1;
-            $prev_match = length($rafsi) + 1;
+            $prev_match += length($rafsi) + 1;
             maybe_push_rafsi( \@words, $rafsi );
             redo LOOP;
         }
 
         # CVV may have -r- or -n- to join it with next
         if ($word =~ m{\G
-           ([bcdfgjklmnprstvxz][aeiou]'[aeiou] |
-            [bcdfgjklmnprstvxz][aeiou][aeiou] )
-            [rn]
+           ([bcdfgjklmnprstvxz][aeiou]'?[aeiou])        [rn]
            (?=[bcdfgjklmnprstvxz])
         }cgx
           ) {
             my $rafsi = $1;
-            $prev_match = length($rafsi) + 1;
+            $prev_match += length($rafsi) + 1;
             maybe_push_rafsi( \@words, $rafsi );
             redo LOOP;
         }
@@ -157,12 +155,12 @@ sub decompose {
         }cgx
           ) {
             my $rafsi = $1;
-            $prev_match = length($rafsi);
+            $prev_match += length($rafsi);
             maybe_push_rafsi( \@words, $rafsi );
             redo LOOP;
         }
 
-        die "mitysisku: unparsable input '$The_Word'\n",
+        die "mitysisku: unparsable input |$The_Word| (@words)\n",
           " " x ( pos // 0 + $prev_match + 29 ), "^\n";
     }
 
@@ -178,15 +176,12 @@ Lojban word lookup tool. Options include:
   -e    Use = for search (exact)
   -l    Use LIKE for search (default; %word% unless [%_] present)
 
-  -g    Gismuify: only attempts to lookup gismu via rafsi of the input
-        (this happens by default if nothing else in the dictionary
-        matches). Compare:
+  -g    Gismuify: only attempts to lookup gismu via rafsi of the
+        input (this happens by default if nothing else in the
+        dictionary matches).
 
-          mitysisku ricyratcu
-          mitysisku -g ricyratcu
-
-  -R    Recurse; also looks up any related words (repeat flag to
-        increase the recursion depth). Recursion is disabled when
+  -R    Recurse; also looks up any related words. Repeat flag to
+        increase the recursion depth. Recursion is disabled when
         performing a gismu search via rafsi (via -g or on no match).
 
 Piping to less(1) may require `less -R` due to the terminal escape
@@ -231,7 +226,7 @@ sub hify {
 sub maybe_push_rafsi {
     my ( $aref, $rafsi ) = @_;
     my $gismu = gismu_from_rafsi($rafsi);
-    die "mitysisku: unknown rafsi '$rafsi' in '$The_Word'\n"
+    die "mitysisku: unknown rafsi |$rafsi| in |$The_Word|\n"
       unless defined $gismu;
     push @$aref, $gismu;
 }
