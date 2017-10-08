@@ -1,0 +1,118 @@
+# a graph or markov chain for the generation of lojban gismu. it must be
+# parsed into a data structure or code, and then the "start" node called
+# and then to stop processing when a node that does not exist is called
+#
+# nodes are listed without leading whitespace; places a node can go to
+# are noted by a whitespace indented comma-delimited list of here
+# potential characters for the gismu and then a corresponding new node
+# for that character to go to
+
+# NOTE this was manually built from the regex in
+# https://la-lojban.github.io/free-gismu-space/
+# so likely needs additional verification or unit tests...
+
+start
+  l,n,r leading_lnr
+  b,f,g,k,m,p,v,x dd_lr
+  d dd_d
+  t dd_t
+  c,s dd_cs
+  j,z dd_jz
+
+dd_cs
+  l,r,p,f,t,k,m,n dd_vowel
+  a,e,i,o,u start_dvcc
+
+dd_d
+  r,j,z dd_vowel
+  a,e,i,o,u start_dvcc
+
+dd_jz
+  b,v,d,g,m dd_vowel
+  a,e,i,o,u start_dvcc
+
+dd_lr
+  l,r dd_vowel
+  a,e,i,o,u start_dvcc
+
+dd_vowel
+  a,e,i,o,u start_ddvc
+
+dd_t
+  c,s,r dd_vowel
+  a,e,i,o,u start_dvcc
+
+leading_lnr
+  a,e,i,o,u start_dvcc
+
+start_ddvc
+  b,c,d,f,g,j,k,l,m,n,p,r,s,t,v,x,z end_vowel
+
+start_dvcc
+  l cc_l
+  r cc_r
+  n cc_n
+  m cc_m
+  x cc_x
+  b cc_b
+  d cc_d
+  g cc_g
+  j,z cc_jz
+  v cc_v
+  c cc_c
+  k cc_k
+  f cc_f
+  p cc_p
+  t cc_t
+  s cc_s
+
+cc_s
+  l,r,m,n,f,k,p,t,x end_vowel
+
+cc_b
+  l,r,m,n,d,g,j,v,z end_vowel
+
+cc_c
+  l,r,m,n,f,k,p,t end_vowel
+
+cc_d
+  l,r,m,n,b,g,j,v,z end_vowel
+
+cc_f
+  l,r,m,n,c,k,p,s,t,x end_vowel
+
+cc_g
+  l,r,m,n,b,d,j,v,z end_vowel
+
+cc_jz
+  l,r,m,n,b,d,g,v end_vowel
+
+cc_k
+  l,r,m,n,c,f,p,s,t end_vowel
+
+cc_l
+  b,d,g,j,v,z,c,f,k,p,s,t,x,r,m,n end_vowel
+
+cc_m
+  l,r,n,b,d,g,j,v,c,f,k,p,s,t,x end_vowel
+
+cc_n
+  b,d,g,j,v,z,c,f,k,p,s,t,x,l,r,m end_vowel
+
+cc_p
+  l,r,m,n,c,f,k,s,t,x end_vowel
+
+cc_r
+  b,d,g,j,v,z,c,f,k,p,s,t,x,l,m,n end_vowel
+
+cc_t
+  l,r,m,n,c,f,k,p,s,x end_vowel
+
+cc_v
+  l,r,m,n,b,d,g,j,z end_vowel
+
+cc_x
+  l,r,m,n,f,p,s,t end_vowel
+
+end_vowel
+  a,e,i,o,u finish

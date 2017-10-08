@@ -1,0 +1,56 @@
+#!/usr/bin/env perl
+
+use 5.14.0;
+use warnings;
+
+my %graph;
+my $current_node;
+
+shift @ARGV if @ARGV == 1 and $ARGV[0] eq '-';
+while (readline) {
+    next if m/^\s*(?:#|\z)/;
+
+    if (m/^(\w+)/) {
+        $current_node = $1;
+        next;
+    }
+
+    if (m/^\s+([a-z,]+)\s+(\w+)/) {
+        die "no node set at $ARGV:$.\n" if !defined $current_node;
+        my $chars     = $1;
+        my $next_node = $2;
+        for my $c ( split ',', $chars ) {
+            push @{ $graph{$current_node} }, [ $c, $next_node ];
+        }
+        next;
+    }
+
+    die "unknown line at $ARGV:$.: $_\n";
+}
+
+all_gismu();
+#say rand_gismu();
+
+sub all_gismu {
+    my $node  = shift // 'start';
+    my $gismu = shift // '';
+
+    if ( !exists $graph{$node} ) {
+        say $gismu;
+    } else {
+        for my $c ( @{ $graph{$node} } ) {
+            all_gismu( $c->[1], $gismu . $c->[0] );
+        }
+    }
+}
+
+sub rand_gismu {
+    my $node   = 'start';
+    my $output = '';
+    while ( exists $graph{$node} ) {
+        my $choice = $graph{$node}->[ rand @{ $graph{$node} } ];
+        $output .= $choice->[0];
+        $node = $choice->[1];
+    }
+    return $output;
+}
