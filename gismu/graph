@@ -4,20 +4,26 @@
 #
 # nodes are listed without leading whitespace; places a node can go to
 # are noted by a whitespace indented comma-delimited list of here
-# potential characters for the gismu and then a corresponding new node
-# for that character to go to
+# potential characters for the gismu and then a next node that can
+# follow that potential character
 
 # NOTE this was manually built from the regex in
 # https://la-lojban.github.io/free-gismu-space/
 # so likely needs additional verification or unit tests...
 
+# entry point for DDVCV or DVCCV gismu forms where "D" is a leading
+# consonant or cluster "DD" and "C" a not-leading consonant or
+# cluster "CC". these forms show up in the node names
 start
   l,n,r leading_lnr
   b,f,g,k,m,p,v,x dd_lr
-  d dd_d
-  t dd_t
   c,s dd_cs
+  d dd_d
   j,z dd_jz
+  t dd_t
+
+leading_lnr
+  a,e,i,o,u start_dvcc
 
 dd_cs
   l,r,p,f,t,k,m,n dd_vowel
@@ -35,19 +41,19 @@ dd_lr
   l,r dd_vowel
   a,e,i,o,u start_dvcc
 
-dd_vowel
-  a,e,i,o,u start_ddvc
-
 dd_t
   c,s,r dd_vowel
   a,e,i,o,u start_dvcc
 
-leading_lnr
-  a,e,i,o,u start_dvcc
+# DDV only goes to C and thence to the end vowel
+dd_vowel
+  a,e,i,o,u start_ddvc
 
 start_ddvc
   b,c,d,f,g,j,k,l,m,n,p,r,s,t,v,x,z end_vowel
 
+# DVCC more complicated as the not-leading consonant cluster allows for
+# more forms
 start_dvcc
   l cc_l
   r cc_r

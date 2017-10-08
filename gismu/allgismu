@@ -25,6 +25,7 @@ while (readline) {
         next;
     }
 
+    chomp;
     die "unknown line at $ARGV:$.: $_\n";
 }
 
@@ -35,10 +36,10 @@ sub all_gismu {
     my $node  = shift // 'start';
     my $gismu = shift // '';
 
-    if ( !exists $graph{$node} ) {
-        say $gismu;
-    } else {
-        for my $c ( @{ $graph{$node} } ) {
+    for my $c ( @{ $graph{$node} } ) {
+        if ( !exists $graph{ $c->[1] } ) {
+            say $gismu . $c->[0];
+        } else {
             all_gismu( $c->[1], $gismu . $c->[0] );
         }
     }

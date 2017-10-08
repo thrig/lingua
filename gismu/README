@@ -1,0 +1,8 @@
+lojban gismu generator by graph
+
+assuming make and perl are installed, generate all potential gismu via
+
+    make all
+
+otherwise study the graph in the 'graph' file, as parsed and executed by
+the code in 'allgismu'
