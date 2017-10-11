@@ -61,7 +61,7 @@ if ( $Words_Found == 0 and $lang eq 'jbo' ) {
 
     # maybe a rafsi?
     if ( length $The_Word == 3 or $The_Word =~ m/^..'.$/ ) {
-        my $gismu = gismu_from_rafsi($The_Word);
+        my $gismu = gismu_or_cmavo($The_Word);
         search( $gismu, $Flag_Recurse ) if $gismu;
     } elsif ( length $The_Word > 4 ) {
         # lujvo must be at least six characters but need to support
@@ -100,6 +100,7 @@ sub decompose {
     # appear as sa'i or sai)) or 4-letter rafsi (CCVC, CVCC e.g.
     # gismu) and these may be stuck together with one of [nry]. CVC
     # cannot appear in tail position (lujvo must end with a vowel)
+    # TODO may need to add more cmavo forms
     my $prev_match = 0;
   LOOP: {
         # tail CCV, CVV, or a full gismu. however! cmevla can end with a
@@ -147,10 +148,12 @@ sub decompose {
             redo LOOP;
         }
 
-        # CVC and CCV can be directly joined
+        # CVC and CCV can be directly joined; with compound cmavo could
+        # have CVV joined without the above [rn] thing
         if ($word =~ m{\G
            ([bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz] |
-           [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou])
+           [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou]  |
+           [bcdfgjklmnprstvxz][aeiou]'?[aeiou])
            (?=[bcdfgjklmnprstvxz])
         }cgx
           ) {
@@ -191,16 +194,18 @@ END_USAGE
     exit 64;
 }
 
-sub gismu_from_rafsi {
+sub gismu_or_cmavo {
     my ($word) = @_;
-    my $gismu;
     if ( length $word == 5 ) {
-        $gismu = (
+        # gismu are five letters (and hopefully nothing else)
+        return (
             $Db_H->selectcol_arrayref( "SELECT word from jbo WHERE word = ?", {}, $word ) )
           ->[0];
-    } elsif ( length $word == 4 and $word !~ m/'/ ) {
-        # truncated gismu aka 4-letter rafsi?
-        $gismu = (
+    }
+    my $found;
+    if ( length $word == 4 and $word !~ m/'/ ) {
+        # truncated gism aka 4-letter rafsi?
+        $found = (
             $Db_H->selectcol_arrayref(
                 "SELECT word from jbo WHERE word LIKE ?",
                 {}, $word . '_'
@@ -208,13 +213,19 @@ sub gismu_from_rafsi {
         )->[0];
     } else {
         # assume a CCV, CVC or CVV form
-        $gismu = (
+        $found = (
             $Db_H->selectcol_arrayref(
                 "SELECT word from rafsi WHERE rafsi = ?", {}, $word
             )
         )->[0];
     }
-    return $gismu;
+    if ( !defined $found ) {
+        # perhaps it's a cmavo?
+        $found = (
+            $Db_H->selectcol_arrayref( "SELECT word from jbo WHERE word = ?", {}, $word ) )
+          ->[0];
+    }
+    return $found;
 }
 
 sub hify {
@@ -225,7 +236,7 @@ sub hify {
 
 sub maybe_push_rafsi {
     my ( $aref, $rafsi ) = @_;
-    my $gismu = gismu_from_rafsi($rafsi);
+    my $gismu = gismu_or_cmavo($rafsi);
     die "mitysisku: unknown rafsi |$rafsi| in |$The_Word|\n"
       unless defined $gismu;
     push @$aref, $gismu;
