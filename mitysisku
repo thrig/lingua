@@ -199,7 +199,7 @@ sub gismu_or_cmavo {
     if ( length $word == 5 ) {
         # gismu are five letters (and hopefully nothing else)
         return (
-            $Db_H->selectcol_arrayref( "SELECT word from jbo WHERE word = ?", {}, $word ) )
+            $Db_H->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
           ->[0];
     }
     my $found;
@@ -207,7 +207,7 @@ sub gismu_or_cmavo {
         # truncated gism aka 4-letter rafsi?
         $found = (
             $Db_H->selectcol_arrayref(
-                "SELECT word from jbo WHERE word LIKE ?",
+                "SELECT word FROM jbo WHERE word LIKE ?",
                 {}, $word . '_'
             )
         )->[0];
@@ -215,14 +215,14 @@ sub gismu_or_cmavo {
         # assume a CCV, CVC or CVV form
         $found = (
             $Db_H->selectcol_arrayref(
-                "SELECT word from rafsi WHERE rafsi = ?", {}, $word
+                "SELECT word FROM rafsi WHERE rafsi = ?", {}, $word
             )
         )->[0];
     }
     if ( !defined $found ) {
         # perhaps it's a cmavo?
         $found = (
-            $Db_H->selectcol_arrayref( "SELECT word from jbo WHERE word = ?", {}, $word ) )
+            $Db_H->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
           ->[0];
     }
     return $found;
@@ -249,7 +249,7 @@ sub render_en {
     # for 'return' found 'klakla' but missed the simpler 'xruti'
     $row->{type} = (
         $Db_H->selectcol_arrayref(
-            "SELECT type from jbo where word=?",
+            "SELECT type FROM jbo WHERE word=?",
             {}, $row->{valsi}
         )
     )->[0];
@@ -271,7 +271,7 @@ sub render_jbo {
 
     my $rafsi =
       $Db_H->selectcol_arrayref(
-        "SELECT rafsi from rafsi WHERE word = ? ORDER BY rafsi",
+        "SELECT rafsi FROM rafsi WHERE word = ? ORDER BY rafsi",
         {}, $row->{word} );
     if (@$rafsi) {
         $row->{rafsi} = join ' ', map { bold($_) } @$rafsi;
@@ -282,7 +282,7 @@ sub render_jbo {
     }
 
     my $related =
-      $Db_H->selectcol_arrayref( "SELECT rel from rel WHERE word = ? ORDER BY rel",
+      $Db_H->selectcol_arrayref( "SELECT rel FROM rel WHERE word = ? ORDER BY rel",
         {}, $row->{word} );
     if (@$related) {
         say "\tRELAT ", join ' ', map { bold( hify($_) ) } @$related;
@@ -301,7 +301,7 @@ sub search {
 
     my $sth =
       $Db_H->prepare(
-        "SELECT * from $source WHERE word $Flag_Method ? ORDER BY word");
+        "SELECT * FROM $source WHERE word $Flag_Method ? ORDER BY word");
 
     if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
         $word = '%' . $word . '%';
