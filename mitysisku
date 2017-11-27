@@ -16,18 +16,21 @@ my $Flag_Method = 'LIKE';
 
 Getopt::Long::Configure("bundling");
 GetOptions(
-    'equal|eq|e' => sub { $Flag_Method = '=' },
-    'gismuify|g' => \my $Flag_Gismu,
-    'help|h|?'   => \&emit_help,
-    'hify|H'     => \my $Flag_Hify,
-    'like|l'     => sub { $Flag_Method = 'LIKE' },
-    'recurse|R+' => \my $Flag_Recurse,
+    'definition|D' => \my $Flag_SearchDefinition,
+    'equal|eq|e'   => sub { $Flag_Method = '=' },
+    'gismuify|g'   => \my $Flag_Gismu,
+    'help|h|?'     => \&emit_help,
+    'hify|H'       => \my $Flag_Hify,
+    'like|l'       => sub { $Flag_Method = 'LIKE' },
+    'recurse|R+'   => \my $Flag_Recurse,
 ) or exit 64;
 
 $Flag_Recurse //= 0;
 
 my $The_Word = shift // emit_help();
 my $lang     = shift // 'jbo';
+
+my $Search_Field = 'word';
 
 my $render_by;
 
@@ -41,7 +44,8 @@ if ( $lang eq 'en' ) {
     # is more or less the same sound as what ' represents and other
     # lojban folks indicate they use this convention; use the hify flag
     # to try to mend ' to h in the output
-    $The_Word =~ tr/h/'/;
+    $The_Word =~ tr/h/'/ unless $Flag_SearchDefinition;
+    $Search_Field = 'definition' if $Flag_SearchDefinition;
 } else {
     die "mitysisku: unknown language |$lang| (use en|jbo)\n";
 }
@@ -301,7 +305,7 @@ sub search {
 
     my $sth =
       $Db_H->prepare(
-        "SELECT * FROM $source WHERE word $Flag_Method ? ORDER BY word");
+        "SELECT * FROM $source WHERE $Search_Field $Flag_Method ? ORDER BY word");
 
     if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
         $word = '%' . $word . '%';
