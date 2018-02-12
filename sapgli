@@ -7,7 +7,7 @@
 # "Wikipedia:VOA Special English Word Book - Simple English Wikipedia,
 # the free encyclopedia".
 
-use strict;
+use 5.14.0;
 use warnings;
 
 use Getopt::Long qw(GetOptions);
@@ -25,9 +25,10 @@ my %patterns = (
 my $wordlist = 'basic';
 
 GetOptions(
-    'help|h|?'     => \&emit_help,
-    'wordlist|w=s' => \$wordlist,
-) or exit 64;
+    'help|h|?'        => \&emit_help,
+    'only-matching|o' => \my $Flag_OnlyMatching,
+    'wordlist|w=s'    => \$wordlist,
+) or exit 65;
 
 die "sapgli: no such wordlist '$wordlist' (basic|combined|voa)\n"
   unless exists $patterns{$wordlist};
@@ -35,8 +36,12 @@ die "sapgli: no such wordlist '$wordlist' (basic|combined|voa)\n"
 shift @ARGV if @ARGV == 1 and $ARGV[0] eq '-';
 
 while (readline) {
-    s/\b$patterns{$wordlist}\b/hilight($1)/eg;
-    print;
+    if ($Flag_OnlyMatching) {
+        say for m/\b$patterns{$wordlist}\b/g;
+    } else {
+        s/\b$patterns{$wordlist}\b/hilight($1)/eg;
+        print;
+    }
 }
 
 sub emit_help {
