@@ -59,7 +59,7 @@ my $source = $Db_H->quote_identifier($lang);
 
 search( $The_Word, $Flag_Recurse ) unless $Flag_Gismu;
 
-if ( $Words_Found == 0 and $lang eq 'jbo' ) {
+if ( $Words_Found == 0 and $lang eq 'jbo' and !$Flag_SearchDefinition ) {
     $Flag_Method  = '=';
     $Flag_Recurse = 0;
 
@@ -120,7 +120,7 @@ sub decompose {
             [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz] )     # cmevla
             \z
         }cgx
-          ) {
+        ) {
             maybe_push_rafsi( \@words, $1 );
             last LOOP;
         }
@@ -133,7 +133,7 @@ sub decompose {
             y
             (?=[bcdfgjklmnprstvxz])
          }cgx
-          ) {
+        ) {
             my $rafsi = $1;
             $prev_match += length($rafsi) + 1;
             maybe_push_rafsi( \@words, $rafsi );
@@ -145,7 +145,7 @@ sub decompose {
            ([bcdfgjklmnprstvxz][aeiou]'?[aeiou])        [rn]
            (?=[bcdfgjklmnprstvxz])
         }cgx
-          ) {
+        ) {
             my $rafsi = $1;
             $prev_match += length($rafsi) + 1;
             maybe_push_rafsi( \@words, $rafsi );
@@ -160,7 +160,7 @@ sub decompose {
            [bcdfgjklmnprstvxz][aeiou]'?[aeiou])
            (?=[bcdfgjklmnprstvxz])
         }cgx
-          ) {
+        ) {
             my $rafsi = $1;
             $prev_match += length($rafsi);
             maybe_push_rafsi( \@words, $rafsi );

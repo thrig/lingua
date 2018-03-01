@@ -1,4 +1,4 @@
-.Dd October  6 2017
+.Dd March  1 2018
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -8,11 +8,7 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl e
-.Op Fl g
-.Op Fl H
-.Op Fl l
-.Op Fl R
+.Op Fl DegHlR
 .Ar word
 .Op Ar en|jbo
 .Ek
@@ -26,6 +22,10 @@ to instead search for
 in the English-to-Lojban dictionary.
 Options:
 .Bl -tag -width -indent
+.It Fl D
+Search the definition. That is, it searches the lojban side though looks
+through the definition text which should be in some other language. This
+was added because the language-to-lojban dictionary may be incomplete.
 .It Fl e
 Exact
 .Ar word
