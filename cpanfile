@@ -1,3 +1,4 @@
+requires 'strictures';
 requires 'App::Prove';
 requires 'DBD::SQLite';
 requires 'DBI';

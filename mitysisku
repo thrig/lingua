@@ -12,17 +12,18 @@ use Getopt::Long qw(GetOptions);
 
 my $DBFILE = "$ENV{HOME}/share/lojban/en.db";
 
-my $Flag_Method = 'LIKE';
+my $Flag_Method           = 'LIKE';
+my $Flag_SearchDefinition = 0;
 
 Getopt::Long::Configure("bundling");
 GetOptions(
-    'definition|D' => \my $Flag_SearchDefinition,
-    'equal|eq|e'   => sub { $Flag_Method = '=' },
+    'definition|D' => sub { $Flag_SearchDefinition = 1; $Flag_Method = 'LIKE' },
+    'equal|eq|e'   => sub { $Flag_Method           = '=' },
     'gismuify|g'   => \my $Flag_Gismu,
     'help|h|?'     => \&emit_help,
     'hify|H'       => \my $Flag_Hify,
-    'like|l'       => sub { $Flag_Method = 'LIKE' },
-    'recurse|R+'   => \my $Flag_Recurse,
+    'like|l'     => sub { $Flag_Method = 'LIKE' },
+    'recurse|R+' => \my $Flag_Recurse,
 ) or exit 64;
 
 $Flag_Recurse //= 0;
