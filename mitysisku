@@ -4,8 +4,8 @@
 # http://jbovlaste.lojban.org and first foist that into a sqlite
 # database via lefanva
 
+use 5.24.0;
 use strictures 2;
-use feature qw(say state);
 use Data::Dumper;
 use DBI;
 use Getopt::Long qw(GetOptions);
@@ -52,6 +52,7 @@ if ( $lang eq 'en' ) {
 }
 
 my $Words_Found = 0;
+my @Lo_Valsi;
 
 my $Db_H = DBI->connect( "dbi:SQLite:dbname=$DBFILE", "", "",
     { AutoCommit => 0, RaiseError => 1, } );
@@ -73,6 +74,15 @@ if ( $Words_Found == 0 and $lang eq 'jbo' and !$Flag_SearchDefinition ) {
         # exactly five if the user gave us a gismu here
         decompose($The_Word);
     }
+}
+
+if ( $Words_Found == 1 and $lang eq 'en' ) {
+    print "\n";
+    $lang        = 'jbo';
+    $render_by   = \&render_jbo;
+    $source      = $Db_H->quote_identifier($lang);
+    $Flag_Method = '=';
+    search( $Lo_Valsi[0], 0 );
 }
 
 END {
@@ -249,6 +259,8 @@ sub maybe_push_rafsi {
 
 sub render_en {
     my ($row) = @_;
+
+    push @Lo_Valsi, $row->{valsi};
 
     # include type so can e.g. easily identify gismu e.g. in a search
     # for 'return' found 'klakla' but missed the simpler 'xruti'
