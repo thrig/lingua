@@ -9,5 +9,8 @@ requires 'SQL::Abstract';
 requires 'Test::Cmd';
 requires 'Test::Most';
 requires 'Test::UnixExit';
+requires 'Text::Levenshtein';
+requires 'Text::Metaphone';
+requires 'Text::WagnerFischer';
 requires 'Text::Unidecode';
 requires 'XML::Twig';
