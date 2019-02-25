@@ -1,0 +1,16 @@
+#!/usr/bin/env expect
+# make https://github.com/lynn/jvoxaskei useful from CLI environment
+# (TODO how compile haskell foo into proper unix tools?)
+if {[llength $argv] == 0} { puts stderr "Usage: lujvo word word ..."; exit }
+proc sendnl {msg} { send -- "$msg\r" }
+cd TODOFIXME/jvoxaskei/
+spawn -noecho ghci Lujvo.hs
+stty -echo
+expect -ex Lujvo>
+set quoted {}
+foreach item $argv { lappend quoted "\"$item\"" }
+sendnl "let tanru = \[[join $quoted ", "]\]"
+expect -ex Lujvo>
+sendnl {mapM_ print $ take 5 $ scoredLujvoList tanru}
+expect -ex Lujvo>
+close

@@ -1,0 +1,23 @@
+#!/usr/bin/env perl
+# make https://github.com/lojban/ilmentufa more useful from CLI environment
+chdir "TODOFIXME/ilmentufa" or die "chdir failed: $!\n";
+# last single argument taken as phrase, which means one must always
+# remember to quote that, or you add code that tries to automatically
+# quote it, unless there are options present
+my @args;
+while ( my $arg = shift @ARGV ) {
+    if ( $arg eq "--" ) {
+        push @args, "@ARGV";
+        last;
+    }
+    if ( $arg =~ m/^-/ ) {
+        push @args, $arg;
+        if ( $arg eq "-p" or $arg eq "-m" ) {
+            push @args, shift @ARGV;
+        }
+        next;
+    }
+    push @args, "$arg @ARGV";
+    last;
+}
+exec qw(node run_camxes), @args;
