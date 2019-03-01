@@ -2,7 +2,7 @@
 #
 # lojban word lookup tool. obtain XML dictionary from
 # http://jbovlaste.lojban.org and first foist that into a sqlite
-# database via lefanva
+# database via `lefanva`
 
 use 5.24.0;
 use strictures 2;
@@ -17,13 +17,14 @@ my $Flag_SearchDefinition = 0;
 
 Getopt::Long::Configure("bundling");
 GetOptions(
-    'definition|D' => sub { $Flag_SearchDefinition = 1; $Flag_Method = 'LIKE' },
-    'equal|eq|e'   => sub { $Flag_Method           = '=' },
+    'definition|D' => sub { $Flag_Method = 'LIKE'; $Flag_SearchDefinition = 1 },
+    'equal|eq|e'   => sub { $Flag_Method = '=' },
     'gismuify|g'   => \my $Flag_Gismu,
     'help|h|?'     => \&emit_help,
     'hify|H'       => \my $Flag_Hify,
     'like|l'     => sub { $Flag_Method = 'LIKE' },
     'recurse|R+' => \my $Flag_Recurse,
+    'type|t=s'   => \my $Flag_Type,
 ) or exit 64;
 
 $Flag_Recurse //= 0;
@@ -39,6 +40,7 @@ if ( $lang eq 'en' ) {
     $render_by    = \&render_en;
     $Flag_Gismu   = 0;
     $Flag_Recurse = 0;
+    undef $Flag_Type;
 } elsif ( $lang eq 'jbo' ) {
     $render_by = \&render_jbo;
     # treat "h" in input same as "'" as h is easier for me to type and
@@ -316,9 +318,14 @@ sub search {
     state %seen;
     $seen{$word}++;
 
+    my $type = '';
+    if ( defined $Flag_Type ) {
+        $type = 'type = ' . $Db_H->quote($Flag_Type) . ' and ';
+    }
+
     my $sth =
       $Db_H->prepare(
-        "SELECT * FROM $source WHERE $Search_Field $Flag_Method ? ORDER BY word");
+        "SELECT * FROM $source WHERE $type $Search_Field $Flag_Method ? ORDER BY word");
 
     if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
         $word = '%' . $word . '%';

@@ -1,4 +1,4 @@
-.Dd November  1 2018
+.Dd February 28 2019
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -69,6 +69,15 @@ Repeat this flag to increase the recursion depth. A gismu search
 disables recursion. An
 .Ar en
 dictionary lookup likewise disables recursion.
+.It Fl t Ar type
+Limit lojban results to only the given type, such as
+.Ar gismu
+or
+.Ar lujvo .
+The exact list of types can be obtained from the underlying database via
+a query such as
+.Pp
+.Dl Ic select distinct(type) from jbo order by type;
 .El
 .Sh EXIT STATUS
 .Ex -std
