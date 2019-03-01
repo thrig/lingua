@@ -1,15 +1,6 @@
-/* Constructs a random word following the sound rules for the
+/* constructs a random word following the sound rules for the
  * importation of foreign words; see the Official Toki Pona Book (pu)
- * for details. */
-
-// if on Linux it may be more sensible to use some not-arc4random() call
-// to obtain random numbers, this ugly is to coax Centos7 to compile.
-// also, you'll probably need to add -lbsd to the Makefile somewhere.
-#ifdef __linux__
-#define _XOPEN_SOURCE 500
-typedef unsigned char u_char;
-#include <bsd/stdlib.h>
-#endif
+ * for details */
 
 #include <stdlib.h>
 #include <unistd.h>
