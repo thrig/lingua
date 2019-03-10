@@ -1,8 +1,10 @@
 #!/usr/bin/env perl
 #
-# lojban word lookup tool. obtain XML dictionary from
-# http://jbovlaste.lojban.org and first foist that into a sqlite
-# database via `lefanva`
+# lojban dictionary tool. obtain XML from http://jbovlaste.lojban.org
+# and foist that into a sqlite database via `lefanva`
+#
+# TODO probably needs a rewrite as many new things have been bolted on
+# over time
 
 use 5.24.0;
 use strictures 2;
@@ -56,10 +58,10 @@ if ( $lang eq 'en' ) {
 my $Words_Found = 0;
 my @Lo_Valsi;
 
-my $Db_H = DBI->connect( "dbi:SQLite:dbname=$DBFILE", "", "",
+my $dbh = DBI->connect( 'dbi:SQLite:dbname=' . $DBFILE, '', '',
     { AutoCommit => 0, RaiseError => 1, } );
 
-my $source = $Db_H->quote_identifier($lang);
+my $source = $dbh->quote_identifier($lang);
 
 search( $The_Word, $Flag_Recurse ) unless $Flag_Gismu;
 
@@ -82,15 +84,15 @@ if ( $Words_Found == 1 and $lang eq 'en' ) {
     print "\n";
     $lang        = 'jbo';
     $render_by   = \&render_jbo;
-    $source      = $Db_H->quote_identifier($lang);
+    $source      = $dbh->quote_identifier($lang);
     $Flag_Method = '=';
     search( $Lo_Valsi[0], 0 );
 }
 
 END {
-    if ($Db_H) {
-        $Db_H->rollback;
-        $Db_H->disconnect;
+    if ($dbh) {
+        $dbh->rollback;
+        $dbh->disconnect;
     }
 }
 exit $Words_Found == 0 ? 1 : 0;
@@ -216,14 +218,14 @@ sub gismu_or_cmavo {
     if ( length $word == 5 ) {
         # gismu are five letters (and hopefully nothing else)
         return (
-            $Db_H->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
+            $dbh->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
           ->[0];
     }
     my $found;
     if ( length $word == 4 and $word !~ m/'/ ) {
         # truncated gism aka 4-letter rafsi?
         $found = (
-            $Db_H->selectcol_arrayref(
+            $dbh->selectcol_arrayref(
                 "SELECT word FROM jbo WHERE word LIKE ?",
                 {}, $word . '_'
             )
@@ -231,7 +233,7 @@ sub gismu_or_cmavo {
     } else {
         # assume a CCV, CVC or CVV form
         $found = (
-            $Db_H->selectcol_arrayref(
+            $dbh->selectcol_arrayref(
                 "SELECT word FROM rafsi WHERE rafsi = ?", {}, $word
             )
         )->[0];
@@ -239,7 +241,7 @@ sub gismu_or_cmavo {
     if ( !defined $found ) {
         # perhaps it's a cmavo?
         $found = (
-            $Db_H->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
+            $dbh->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
           ->[0];
     }
     return $found;
@@ -256,7 +258,7 @@ sub maybe_push_rafsi {
     my $gismu = gismu_or_cmavo($rafsi);
     die "mitysisku: unknown rafsi |$rafsi| in |$The_Word|\n"
       unless defined $gismu;
-    push @$aref, $gismu;
+    push $aref->@*, $gismu;
 }
 
 sub render_en {
@@ -267,7 +269,7 @@ sub render_en {
     # include type so can e.g. easily identify gismu e.g. in a search
     # for 'return' found 'klakla' but missed the simpler 'xruti'
     $row->{type} = (
-        $Db_H->selectcol_arrayref(
+        $dbh->selectcol_arrayref(
             "SELECT type FROM jbo WHERE word=?",
             {}, $row->{valsi}
         )
@@ -289,11 +291,11 @@ sub render_jbo {
       . ( $row->{definition} // '(no definition provided)' );
 
     my $rafsi =
-      $Db_H->selectcol_arrayref(
+      $dbh->selectcol_arrayref(
         "SELECT rafsi FROM rafsi WHERE word = ? ORDER BY rafsi",
         {}, $row->{word} );
-    if (@$rafsi) {
-        $row->{rafsi} = join ' ', map { bold($_) } @$rafsi;
+    if ($rafsi->@*) {
+        $row->{rafsi} = join ' ', map { bold($_) } $rafsi->@*;
     }
 
     for my $field (qw/gloss rafsi notes/) {
@@ -301,10 +303,10 @@ sub render_jbo {
     }
 
     my $related =
-      $Db_H->selectcol_arrayref( "SELECT rel FROM rel WHERE word = ? ORDER BY rel",
+      $dbh->selectcol_arrayref( "SELECT rel FROM rel WHERE word = ? ORDER BY rel",
         {}, $row->{word} );
-    if (@$related) {
-        say "\tRELAT ", join ' ', map { bold( hify($_) ) } @$related;
+    if ($related->@*) {
+        say "\tRELAT ", join ' ', map { bold( hify($_) ) } $related->@*;
     }
 
     print "\n";
@@ -320,11 +322,11 @@ sub search {
 
     my $type = '';
     if ( defined $Flag_Type ) {
-        $type = 'type = ' . $Db_H->quote($Flag_Type) . ' and ';
+        $type = 'type = ' . $dbh->quote($Flag_Type) . ' and ';
     }
 
     my $sth =
-      $Db_H->prepare(
+      $dbh->prepare(
         "SELECT * FROM $source WHERE $type $Search_Field $Flag_Method ? ORDER BY word");
 
     if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
@@ -338,7 +340,7 @@ sub search {
         eval {
             my $related = $render_by->($row);
             if ( $depth > 0 and $related ) {
-                for my $another (@$related) {
+                for my $another ($related->@*) {
                     push @more, $another unless $seen{$another}++;
                 }
             }

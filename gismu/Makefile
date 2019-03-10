@@ -1,2 +1,2 @@
 all: allgismu graph
-	perl allgismu < graph > all
+	./allgismu < graph > all

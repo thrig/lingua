@@ -1,20 +1,28 @@
 #!/usr/bin/env perl
-use 5.14.0;
+#
+# say-jbo - espeak wrapper for audioizing lojban phrases
+
+use 5.24.0;
 use File::Spec ();
 use Text::Unidecode qw(unidecode);
 
-my $bridi = "@ARGV";
+my $bridi    = "@ARGV";
+my $filename = $bridi;
 
 # allow ni'o or whatnot to be input as niho
 $bridi =~ tr/h/'/;
 
-my $filename = unidecode($bridi);
-# ' back to h for filesystem
-tr/'/h/, s/[^A-Za-z0-9_-]//g, $_ = lc, $_ .= '.wav' for $filename;
+$filename = lc unidecode($filename);
+$filename =~ s/[^a-z0-9_]//g;
+$filename = substr $filename, 0, 64;
+$filename .= '.wav';
 
-my $filepath = File::Spec->catfile( $ENV{HOME}, 'Desktop', $filename );
+my $wav = File::Spec->catfile( File::Spec->tmpdir, $filename );
 
-system( qw(speak -v test/jbo -w), $filepath, $bridi ) == 0
-  or die "speak failed: $?\n";
+my $ret = system qw(espeak -v other/jbo -w), $wav, $bridi;
+die "espeak failed: $?\n" if $ret != 0;
 
-system( 'afplay', $filepath );
+# TWEAK try afplay on Mac OS X
+# TODO is there a better player on OpenBSD
+exec qw(ffplay -autoexit -loglevel quiet -nodisp -hide_banner), $wav;
+die "could not exec audio player: $!\n";

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use 5.14.0;
+use 5.24.0;
 use warnings;
 
 my %graph;
@@ -20,7 +20,7 @@ while (readline) {
         my $chars     = $1;
         my $next_node = $2;
         for my $c ( split ',', $chars ) {
-            push @{ $graph{$current_node} }, [ $c, $next_node ];
+            push $graph{$current_node}->@*, [ $c, $next_node ];
         }
         next;
     }
@@ -36,7 +36,7 @@ sub all_gismu {
     my $node  = shift // 'start';
     my $gismu = shift // '';
 
-    for my $c ( @{ $graph{$node} } ) {
+    for my $c ( $graph{$node}->@* ) {
         if ( !exists $graph{ $c->[1] } ) {
             say $gismu . $c->[0];
         } else {
@@ -49,7 +49,7 @@ sub rand_gismu {
     my $node   = 'start';
     my $output = '';
     while ( exists $graph{$node} ) {
-        my $choice = $graph{$node}->[ rand @{ $graph{$node} } ];
+        my $choice = $graph{$node}->[ rand $graph{$node}->@* ];
         $output .= $choice->[0];
         $node = $choice->[1];
     }

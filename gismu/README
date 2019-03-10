@@ -1,8 +1,12 @@
-lojban gismu generator by graph
+lojban gismu foo
 
-assuming make and perl are installed, generate all potential gismu via
+ * allgismu - assuming make and perl are installed, generate all
+   potential gismu via
 
-    make all
+     make all
 
-otherwise study the graph in the 'graph' file, as parsed and executed by
-the code in 'allgismu'
+   otherwise study the graph in the 'graph' file, as parsed and executed
+   by the code in 'allgismu'
+
+ * similar-gismu searches the ../lefanva generated dictionary file for
+   similar gismu

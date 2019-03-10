@@ -1,32 +1,32 @@
 #!/usr/bin/env perl
 #
-# huh so there are actually a fair number of single-character edits and
-# smaller numbers of gismu have two to five peers they are a single
-# character away from
+# .ua. there exist a fair number of single-character edits and smaller
+# numbers of gismu have two to five peers they are a single character
+# away from
 #
-#  $ perl similar-gismu | grep 5\$
+#  $ ./similar-gismu | grep 5\$
+#  canci danci lanci manci panci vanci 5
 #  garna barna carna farna marna rarna 5
-#    33.89% 1
-#     7.61% 2
-#     1.05% 3
-#     0.43% 4
-#     0.06% 5
-#  $
+#    33.98% 1
+#     7.81% 2
+#     1.04% 3
+#     0.37% 4
+#     0.12% 5
 
-use 5.14.0;
+use 5.24.0;
 use warnings;
 use DBI;
 
-# see lefanva updir for where this comes from
+# see ../lefanva for where this comes from
 my $DBFILE = "$ENV{HOME}/share/lojban/en.db";
-my $Db_H   = DBI->connect( "dbi:SQLite:dbname=$DBFILE", "", "",
-    { AutoCommit => 0, RaiseError => 1, } );
+my $dbh    = DBI->connect( 'dbi:SQLite:dbname=' . $DBFILE,
+    '', '', { AutoCommit => 0, RaiseError => 1, } );
 
 sub MAX_GISMU_INDEX () { 4 }
 
-# this selects also experimental gismu
+# NOTE also selects experimental gismu
 my $All_Gismu =
-  $Db_H->selectcol_arrayref(q{SELECT word FROM jbo WHERE type LIKE '%gismu'});
+  $dbh->selectcol_arrayref(q{SELECT word FROM jbo WHERE type LIKE '%gismu'});
 
 my $Total_Gismu = @$All_Gismu;
 
@@ -34,16 +34,16 @@ distance_one();
 #distance_two();
 
 END {
-    if ($Db_H) {
-        $Db_H->rollback;
-        $Db_H->disconnect;
+    if ($dbh) {
+        $dbh->rollback;
+        $dbh->disconnect;
     }
 }
 
 sub close_enough {
     my ( $orig, $near ) = @_;
     my @match;
-    for my $gismu (@$All_Gismu) {
+    for my $gismu ( $All_Gismu->@* ) {
         next if $gismu eq $orig;
         push @match, $gismu if $gismu =~ m/^$near/;
     }
@@ -53,7 +53,7 @@ sub close_enough {
 sub distance_one {
     my ( %seen, %dist );
 
-    for my $gismu (@$All_Gismu) {
+    for my $gismu ( $All_Gismu->@* ) {
         next if exists $seen{$gismu};
         for my $i ( 0 .. MAX_GISMU_INDEX ) {
             my $near = $gismu;
@@ -74,7 +74,7 @@ sub distance_one {
 sub distance_two {
     my ( %seen, %dist );
 
-    for my $gismu (@$All_Gismu) {
+    for my $gismu ( $All_Gismu->@* ) {
         next if exists $seen{$gismu};
         for my $i ( 0 .. MAX_GISMU_INDEX - 1 ) {
             for my $j ( $i + 1 .. MAX_GISMU_INDEX ) {

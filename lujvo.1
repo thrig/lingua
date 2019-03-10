@@ -1,0 +1,47 @@
+.Dd March 10 2019
+.Dt LUJVO 1
+.nh
+.Os
+.Sh NAME
+.Nm lujvo
+.Nd lojban lujvo tool
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Ar phrase ..
+.Ek
+.Sh DESCRIPTION
+.Nm
+offers a command line interface to generate lujvo with.
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+An attempt at
+.Qq songbird
+might involve
+.Sy sanga
+and
+.Sy cipni
+for a
+.Qq singer type of bird
+or
+.Pp
+.Dl % Ic for g in sanga cipni; mitysisku $g \&| grep GLOSS
+.Dl \& \& \& \& \& \& \& \& GLOSS sing
+.Dl \& \& \& \& \& \& \& \& GLOSS bird
+.Dl % Ic lujvo sanga cipni
+.Dl (6367,"sa'acpi")
+.Dl (6978,"sagycpi")
+.Dl (8008,"sangycpi")
+.Dl (9037,"sagycipni")
+.Dl (9526,"sa'arcipni")
+.Pp
+where lower scores (as in golf) are considered better.
+.Sh SEE ALSO
+.Xr camxes 1 ,
+.Xr mitysisku 1
+.Pp
+https://github.com/lojban/lynn/jvoxaskei
+.Sh AUTHORS
+.An Lynn ,
+.An Jeremy Mates

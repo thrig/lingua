@@ -1,9 +1,12 @@
 #!/usr/bin/env perl
-# make https://github.com/lojban/ilmentufa more useful from CLI environment
+#
+# camxes - make https://github.com/lojban/ilmentufa more useful on the
+# CLI. the argument complexity comes from a desire to support `camxes do
+# mo` which needs to be turned into `node run_camxes "do mo"` while not
+# mixing any options into that ultimate single argument
+
 chdir "TODOFIXME/ilmentufa" or die "chdir failed: $!\n";
-# last single argument taken as phrase, which means one must always
-# remember to quote that, or you add code that tries to automatically
-# quote it, unless there are options present
+
 my @args;
 while ( my $arg = shift @ARGV ) {
     if ( $arg eq "--" ) {
@@ -20,4 +23,6 @@ while ( my $arg = shift @ARGV ) {
     push @args, "$arg @ARGV";
     last;
 }
+
+# NOTE node maybe is instead called nodejs on Linux?
 exec qw(node run_camxes), @args;

@@ -3,7 +3,7 @@
 --   cd .../path/to/jvoxaskei
 --   ghc --make main.hs
 --   strip main
---   mv main ...
+--   mv main .../bin/lujvo
 import System.Environment
 import Lojban
 import Lujvo

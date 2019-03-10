@@ -1,12 +1,16 @@
 #!/usr/bin/env perl
 #
-# Translator for http://jbovlaste.lojban.org XML output into a SQLite
-# database for use by mitysisku e.g.
+# translator for http://jbovlaste.lojban.org XML output into sqlite for
+# use by mitysisku
 #
 #   lefanva english2lojban.xml ~/share/lojban/en.db
+#
+# this is slow, but on the other hand the dictionary likely does not
+# need frequent updates
 
-use 5.14.0;
+use 5.24.0;
 use warnings;
+use DBD::SQLite 1.30_01;    # for sqlite_allow_multiple_statements
 use DBI;
 use SQL::Abstract;
 use XML::Twig;
@@ -26,8 +30,9 @@ if ( !defined $dbfile ) {
 
 # updates are hard; wipe out anything prior in the output file
 unlink $dbfile;
-my $dbh = DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
-    { AutoCommit => 0, RaiseError => 1 } );
+my $dbh = DBI->connect( 'dbi:SQLite:dbname=' . $dbfile,
+    '', '',
+    { AutoCommit => 0, RaiseError => 1, sqlite_allow_multiple_statements => 1 } );
 dbinit();
 
 my $sql = SQL::Abstract->new;
@@ -47,17 +52,10 @@ XML::Twig->new(
 $dbh->commit;
 $dbh->disconnect;
 
-exit;
-
-########################################################################
-#
-# SUBROUTINES
-
 sub dbinit {
-    while ( my $st = readline *DATA ) {
-        chomp $st;
-        $dbh->do($st);
-    }
+    $dbh->do(
+        do { local $/; readline *DATA }
+    );
     $dbh->commit;
 }
 

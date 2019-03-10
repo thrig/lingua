@@ -1,13 +1,13 @@
 #!/usr/bin/env perl
 #
-# Utility that indicates what belongs to "simple English" in input text.
-# Word lists salvaged from HTML as of 2017-09-07 from "Appendix:Basic
+# utility that indicates what belongs to "simple English" in input text.
+# word lists salvaged from HTML as of 2017-09-07 from "Appendix:Basic
 # English word list - Wiktionary", "Wikipedia:Basic English combined
 # wordlist - Simple English Wikipedia, the free encyclopedia", and
 # "Wikipedia:VOA Special English Word Book - Simple English Wikipedia,
-# the free encyclopedia".
+# the free encyclopedia"
 
-use 5.14.0;
+use 5.24.0;
 use warnings;
 
 use Getopt::Long qw(GetOptions);

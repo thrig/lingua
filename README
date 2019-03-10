@@ -1,15 +1,22 @@
-Linguistic related utilities mostly for toki pona (Kirk) and lojban (Spock)
+linguistic utilities mostly for toki pona (Kirk) and lojban (Spock)
+assuming unix at the command line
 
-You might spare yourself the inevitable with lojban given
+ * camxes - make https://github.com/lojban/ilmentufa useful from CLI
+ * lefanva - converts lojban XML dictionary into sqlite for mitysisku
+ * lujvo.hs - make https://github.com/lynn/jvoxaskei useful from CLI
+ * mitysisku - lojban dictionary tool
+ * nimi - toki pona dictionary tool
+ * sapgli - highlights basic english in input text
+ * say-jbo - wrapper for espeak to get a somewhat usable reference
+   pronunciation of lojban phrases
 
-    jbobauclisezborstidjikemclidu'eselri'a	(lujvo)
-        That $x_1$=$c_1$=$se_1$=$st_1$=$d_1$ wants that they [$x_1$]
-        stop learning facts $x_2$=$c_2$ about a Lojbanic language
-        $x_3$=$c_3$=$b_1$=$l_1$ (using learning material $x_4$=$c_4$,
-        [$x_1$] wants for purpose $x_5$=$d_3$) is the result of them
-        [$x_1$] learning too much, result under conditions $x_6$=$r_3$,
-        too much by standard $x_7$=$d_3$
-        (to want to stop learning Lojban because of learning it too much)
+required packages for OpenBSD
+
+    doas pkg_add espeak ffmpeg ghc node
+    make depend
+
+rumor has it node (in camxes) is called something else on Linux;
+portability has not been tested beyond OpenBSD 6.4 and Mac OS X 10.11
 
 see also the Lingua::Awkwords perl module which is a more complicated
 yet more flexible method to perform the same work as sitelen-sin.c

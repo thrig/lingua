@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
 #
-# Looks up toki pona dictionary words. There may be things to TWEAK.
+# looks up toki pona dictionary words. there may be things to TWEAK
 
-use 5.14.0;
+use 5.24.0;
 use warnings;
 use Getopt::Long qw(GetOptions);
 

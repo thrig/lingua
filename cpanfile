@@ -1,6 +1,6 @@
 requires 'strictures';
 requires 'App::Prove';
-requires 'DBD::SQLite';
+requires 'DBD::SQLite', '>= 1.30_01';
 requires 'DBI';
 requires 'Getopt::Long';
 requires 'Lingua::Awkwords';

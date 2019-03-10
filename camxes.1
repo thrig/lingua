@@ -1,0 +1,79 @@
+.Dd March 10 2019
+.Dt CAMXES 1
+.nh
+.Os
+.Sh NAME
+.Nm camxes
+.Nd lojban grammar parser
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Op Cm -std Cm -beta Cm -cbm Cm -ckt Cm -exp
+.Op Fl m Ar mode
+.Op Fl p Ar path
+.Ar phrase ..
+.Ek
+.Sh DESCRIPTION
+.Nm
+wraps the
+.Pa ilmentufa
+repository and offers a command line interface to the lojban grammar
+parsers in that repository. Options:
+.Bl -tag -width -indent
+.It Cm -std Cm -beta Cm -cbm Cm -ckt Cm -exp
+Select what grammar engine to use (see also
+.Fl p
+flag).
+.It Fl m Ar mode
+Output post processing options, of the following letters.
+.Pp
+.Bl -tag -width -indent -compact
+.It M
+keep morphology
+.It S
+show spaces
+.It C
+show word classes (selmaho)
+.It T
+show terminators
+.It N
+show main node labels
+.It R
+raw output, do not prune the tree
+.It J
+JSON output
+.El
+.It Fl p Ar path
+select a parser by the given file path.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+.Qq "Man Afraid of His Computer just yelled"
+.Pp
+.Dl $ Ic camxes la nanmu poi terpa le ke\e\&'a skami puzi krixa
+.Dl ...
+.Pp
+As with similar lojban tools,
+.Ar '
+can often be replaced with
+.Ar h
+or the entire phrase quoted to help protect it from shell interpolation.
+.Pp
+More interesting for complicated phrases is to show the terminators
+.Pp
+.Dl $ Ic camxes -m T ...
+.Pp
+or also word classes and main node labels
+.Pp
+.Dl $ Ic camxes -m CTN ...
+.Pp
+to see where and what the (often elided) terminators are and what the
+various words and groups are.
+.Sh SEE ALSO
+.Xr lujvo 1 ,
+.Xr mitysisku 1
+.Pp
+https://github.com/lojban/ilmentufa
+.Sh AUTHORS
+.Qq lagleki, ilmen, and other contributors

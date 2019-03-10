@@ -1,4 +1,4 @@
-.Dd February 28 2019
+.Dd March 10 2019
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -23,9 +23,7 @@ in the English-to-Lojban dictionary.
 Options:
 .Bl -tag -width -indent
 .It Fl D
-Search the definition. That is, it searches the lojban side though looks
-through the definition text which should be in some other language. This
-was added because the language-to-lojban dictionary may be incomplete.
+Search the text of the definition for the lojban word.
 .Pp
 Enables
 .Fl l
@@ -83,23 +81,26 @@ a query such as
 .Ex -std
 .Sh EXAMPLES
 Exact lookup on
-.Ar la'o
+.Sy la'o
 as otherwise the default
 .Cm LIKE
 search finds too many false positives
 .Pp
 .Dl $ Ic mitysisku -e \&"la'o\&"
+.Dl ...
 .Pp
 or to avoid the need to shell quote the input
 .Pp
 .Dl $ Ic mitysisku -e laho
+.Dl ...
 .Pp
 or to depart from official form in the output
 .Pp
 .Dl $ Ic mitysisku -H -e laho
+.Dl ...
 .Pp
 Recursive search on anything containing
-.Ar tricu
+.Sy tricu
 and also any related terms to those hits. Send to pager with support for
 terminal escape codes.
 .Pp
@@ -111,11 +112,41 @@ by...look, squirrel!
 .Dl $ Ic mitysisku ricyratcu
 .Dl ...
 .Dl $ Ic mitysisku -g ricyratcu
-.Sh SEE ALSO
-.Cm lefanva
-will be necessary to convert the XML dictionary to a format
+.Dl ...
+.Pp
+Definition searches are sometimes necessary, for example if you recall a
+cmavo with
+.Qq under
+in its definition but forgot it was
+.Sy me'a
+(undercut):
+.Pp
+.Dl $ Ic mitysisku -t cmavo -D under
+.Dl ...
+.Pp
 .Nm
-can consume; this utility also contains the database schema if one wants
-to directly access that via SQL.
+tries to parse cmavo compounds and lujvo but is by no means perfect at
+this; it may be necessary to use
+.Xr camxes 1
+to parse phrases where the words have been mushed together randomly.
+.Pp
+.Dl $ Ic mitysisku -e domo
+.Dl $ Ic mitysisku -l domo \&| head -1
+.Dl Sy medomoi Li (cmavo-compound)
+.Dl $ Ic camxes domo
+.Dl (do mo)
+.Sh SEE ALSO
+.Xr camxes 1 ,
+.Xr lujvo 1
+.Pp
+.Cm lefanva
+converts the XML dictionary to a format
+.Nm
+can consume; this utility also contains the database schema:
+.Pp
+https://github.com/thrig/lingua
 .Sh AUTHOR
 .An Jeremy Mates
+.Sh BUGS
+Only the English dictionary is supported though other languages should
+not in theory be too difficult to add support for.
