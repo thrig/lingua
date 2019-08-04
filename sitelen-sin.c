@@ -1,7 +1,8 @@
-/* constructs a random word following the sound rules for the
- * importation of foreign words; see the Official Toki Pona Book (pu)
- * for details */
+/* sitelen-sin - constructs a random word following the sound rules for
+ * the importation of foreign words; see the Official Toki Pona Book
+ * (pu) for details */
 
+#include <err.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -22,6 +23,11 @@ int main(void)
     char consonant, vowel;
     int syllable_count = 2 + arc4random_uniform(3);
     int s, wordidx = 0;
+
+#ifdef __OpenBSD__
+    if (pledge("stdio", NULL) == -1)
+        err(1, "pledge failed");
+#endif
 
     for (s = 0; s < syllable_count; s++) {
         vowel = vowels[arc4random_uniform(vowel_count)];
