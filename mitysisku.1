@@ -1,4 +1,4 @@
-.Dd March 10 2019
+.Dd November 13 2019
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -67,6 +67,9 @@ Repeat this flag to increase the recursion depth. A gismu search
 disables recursion. An
 .Ar en
 dictionary lookup likewise disables recursion.
+.It Fl s Ar selmaho
+Limit lojban results to only the given selma'o, such as 
+.Ar KOhA3 .
 .It Fl t Ar type
 Limit lojban results to only the given type, such as
 .Ar gismu
@@ -122,6 +125,11 @@ in its definition but forgot it was
 (undercut):
 .Pp
 .Dl $ Ic mitysisku -t cmavo -D under
+.Dl ...
+.Pp
+All matches for a given selma'o can be made via:
+.Pp
+.Dl $ Ic mitysisku -s KOhA3 -l '%'
 .Dl ...
 .Pp
 .Nm

@@ -3,7 +3,7 @@
 # translator for http://jbovlaste.lojban.org XML output into sqlite for
 # use by mitysisku
 #
-#   lefanva english2lojban.xml ~/share/lojban/en.db
+#   ./lefanva .../english2lojban.xml ~/share/lojban/en.db
 #
 # this is slow, but on the other hand the dictionary likely does not
 # need frequent updates
@@ -23,16 +23,16 @@ emit_help() unless @ARGV;
 my $xmlfile = shift;
 my $dbfile  = shift;
 
-if ( !defined $dbfile ) {
+if (!defined $dbfile) {
     $dbfile = $xmlfile =~ s/[^.]+$//r;
     $dbfile .= 'db';
 }
 
 # updates are hard; wipe out anything prior in the output file
 unlink $dbfile;
-my $dbh = DBI->connect( 'dbi:SQLite:dbname=' . $dbfile,
+my $dbh = DBI->connect('dbi:SQLite:dbname=' . $dbfile,
     '', '',
-    { AutoCommit => 0, RaiseError => 1, sqlite_allow_multiple_statements => 1 } );
+    { AutoCommit => 0, RaiseError => 1, sqlite_allow_multiple_statements => 1 });
 dbinit();
 
 my $sql = SQL::Abstract->new;
@@ -44,8 +44,8 @@ my $COMMIT_EVERY = 1000;
 # handle the periodic commits
 XML::Twig->new(
     twig_roots => {
-        nlword => sub { elementary( \&nlword, @_ ) },
-        valsi  => sub { elementary( \&valsi,  @_ ) },
+        nlword => sub { elementary(\&nlword, @_) },
+        valsi  => sub { elementary(\&valsi,  @_) },
     }
 )->parsefile($xmlfile);
 
@@ -62,7 +62,7 @@ sub dbinit {
 sub elementary {
     my $handler = shift;
     $Commit_Count += &$handler;
-    if ( $Commit_Count >= $COMMIT_EVERY ) {
+    if ($Commit_Count >= $COMMIT_EVERY) {
         $dbh->commit;
         $Commit_Count = 0;
     }
@@ -77,8 +77,8 @@ sub emit_help {
 # these are just simple attribute lists ...
 #   <nlword word="checklist" valsi="zvaste" />
 sub nlword {
-    my ( $t, $elt ) = @_;
-    my ( $statement, @bind ) = $sql->insert( 'en', $elt->atts );
+    my ($t,         $elt)  = @_;
+    my ($statement, @bind) = $sql->insert('en', $elt->atts);
     my $sth = $dbh->prepare($statement);
     $sth->execute(@bind);
     return 1;
@@ -86,7 +86,7 @@ sub nlword {
 
 # ... and these elements are fairly complicated
 sub valsi {
-    my ( $t, $elt ) = @_;
+    my ($t, $elt) = @_;
     my $commits = 1;
 
     # the unofficial entries all have their type prefixed with
@@ -96,10 +96,10 @@ sub valsi {
     #  <valsi unofficial="true" word="a'au" type="experimental cmavo">
     my $attr = $elt->atts;
     $attr->{unofficial} =
-      ( exists $attr->{unofficial} and $attr->{unofficial} eq 'true' ) ? 1 : 0;
+      (exists $attr->{unofficial} and $attr->{unofficial} eq 'true') ? 1 : 0;
 
     # on the untested assumption there's only one of these elements
-    for my $field (qw/definition definitionid notes/) {
+    for my $field (qw/definition definitionid notes selmaho/) {
         my $text = $elt->first_child_trimmed_text($field);
         $attr->{$field} = $text if $text ne '';
     }
@@ -110,31 +110,31 @@ sub valsi {
     #  <glossword word="and/or" sense="inclusive or" />
     #  <glossword word="or" sense="inclusive or" />
     my @glossen;
-    for my $gloss ( $elt->children('glossword') ) {
+    for my $gloss ($elt->children('glossword')) {
         my $glword = $gloss->att('word');
         my $sense  = $gloss->att('sense');
-        if ( defined $sense and $sense ne $glword ) {
+        if (defined $sense and $sense ne $glword) {
             $glword .= ' (' . $sense . ')';
         }
         push @glossen, $glword;
     }
     $attr->{gloss} = join ', ', @glossen;
 
-    my ( $statement, @bind ) = $sql->insert( 'jbo', $attr );
+    my ($statement, @bind) = $sql->insert('jbo', $attr);
     my $sth = $dbh->prepare($statement);
     $sth->execute(@bind);
 
-    if ( exists $attr->{notes} ) {
+    if (exists $attr->{notes}) {
         # some entries have a reference to the word itself e.g. 'lo':
         #   <notes>Terminated with {ku}. Under the xorlo reform, {lo}
         #   converts a selbri to a sumti in a generic way. In
         #   particular, lo broda = {zo&apos;e} noi broda.</notes>
         # so exclude those in addition to any duplicate references.
-        my %seen = ( $attr->{word} => 1 );
-        for my $rel ( $attr->{notes} =~ m/{([^}]+)/g ) {
+        my %seen = ($attr->{word} => 1);
+        for my $rel ($attr->{notes} =~ m/{([^}]+)/g) {
             next if $seen{$rel}++;
-            my ( $st, @bind ) =
-              $sql->insert( 'rel', { word => $attr->{word}, rel => $rel } );
+            my ($st, @bind) =
+              $sql->insert('rel', { word => $attr->{word}, rel => $rel });
             my $sth = $dbh->prepare($st);
             $sth->execute(@bind);
             $commits++;
@@ -143,8 +143,8 @@ sub valsi {
 
     my @rafsi = $elt->children_text('rafsi');
     for my $raf (@rafsi) {
-        my ( $st, @bind ) =
-          $sql->insert( 'rafsi', { word => $attr->{word}, rafsi => $raf } );
+        my ($st, @bind) =
+          $sql->insert('rafsi', { word => $attr->{word}, rafsi => $raf });
         my $sth = $dbh->prepare($st);
         $sth->execute(@bind);
         $commits++;
@@ -156,7 +156,7 @@ sub valsi {
 # NOTE the various ->insert lines above must agree with these
 __DATA__
 CREATE TABLE en (word TEXT, valsi TEXT, sense TEXT, place INTEGER);
-CREATE TABLE jbo (definitionid INTEGER, unofficial INTEGER, word TEXT, definition TEXT, username TEXT, gloss TEXT, type TEXT, notes TEXT);
+CREATE TABLE jbo (definitionid INTEGER, unofficial INTEGER, word TEXT, definition TEXT, username TEXT, gloss TEXT, type TEXT, notes TEXT, selmaho TEXT);
 CREATE TABLE rel (word TEXT, rel TEXT);
 CREATE TABLE rafsi (word TEXT, rafsi TEXT);
 CREATE INDEX enindex ON en (word);

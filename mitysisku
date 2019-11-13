@@ -20,14 +20,17 @@ my $Flag_SearchDefinition = 0;
 Getopt::Long::Configure("bundling");
 GetOptions(
     'definition|D' => sub { $Flag_Method = 'LIKE'; $Flag_SearchDefinition = 1 },
-    'equal|eq|e'   => sub { $Flag_Method = '=' },
-    'gismuify|g'   => \my $Flag_Gismu,
-    'help|h|?'     => \&emit_help,
-    'hify|H'       => \my $Flag_Hify,
-    'like|l'     => sub { $Flag_Method = 'LIKE' },
-    'recurse|R+' => \my $Flag_Recurse,
-    'type|t=s'   => \my $Flag_Type,
+    'equal|eq|e'  => sub { $Flag_Method = '=' },
+    'gismuify|g'  => \my $Flag_Gismu,
+    'help|h|?'    => \&emit_help,
+    'hify|H'      => \my $Flag_Hify,
+    'like|l'      => sub { $Flag_Method = 'LIKE' },
+    'recurse|R+'  => \my $Flag_Recurse,
+    'selmaho|s=s' => \my $Flag_Selmaho,
+    'type|t=s'    => \my $Flag_Type,
 ) or exit 64;
+
+emit_help() if $Flag_Selmaho and $Flag_Type;
 
 $Flag_Recurse //= 0;
 
@@ -38,12 +41,13 @@ my $Search_Field = 'word';
 
 my $render_by;
 
-if ( $lang eq 'en' ) {
+if ($lang eq 'en') {
     $render_by    = \&render_en;
     $Flag_Gismu   = 0;
     $Flag_Recurse = 0;
+    undef $Flag_Selmaho;
     undef $Flag_Type;
-} elsif ( $lang eq 'jbo' ) {
+} elsif ($lang eq 'jbo') {
     $render_by = \&render_jbo;
     # treat "h" in input same as "'" as h is easier for me to type and
     # is more or less the same sound as what ' represents and other
@@ -58,35 +62,35 @@ if ( $lang eq 'en' ) {
 my $Words_Found = 0;
 my @Lo_Valsi;
 
-my $dbh = DBI->connect( 'dbi:SQLite:dbname=' . $DBFILE, '', '',
-    { AutoCommit => 0, RaiseError => 1, } );
+my $dbh = DBI->connect('dbi:SQLite:dbname=' . $DBFILE,
+    '', '', { AutoCommit => 0, RaiseError => 1, });
 
 my $source = $dbh->quote_identifier($lang);
 
-search( $The_Word, $Flag_Recurse ) unless $Flag_Gismu;
+search($The_Word, $Flag_Recurse) unless $Flag_Gismu;
 
-if ( $Words_Found == 0 and $lang eq 'jbo' and !$Flag_SearchDefinition ) {
+if ($Words_Found == 0 and $lang eq 'jbo' and !$Flag_SearchDefinition) {
     $Flag_Method  = '=';
     $Flag_Recurse = 0;
 
     # maybe a rafsi?
-    if ( length $The_Word == 3 or $The_Word =~ m/^..'.$/ ) {
+    if (length $The_Word == 3 or $The_Word =~ m/^..'.$/) {
         my $gismu = gismu_or_cmavo($The_Word);
-        search( $gismu, $Flag_Recurse ) if $gismu;
-    } elsif ( length $The_Word > 4 ) {
+        search($gismu, $Flag_Recurse) if $gismu;
+    } elsif (length $The_Word > 4) {
         # lujvo must be at least six characters but need to support
         # exactly five if the user gave us a gismu here
         decompose($The_Word);
     }
 }
 
-if ( $Words_Found == 1 and $lang eq 'en' ) {
+if ($Words_Found == 1 and $lang eq 'en') {
     print "\n";
     $lang        = 'jbo';
     $render_by   = \&render_jbo;
     $source      = $dbh->quote_identifier($lang);
     $Flag_Method = '=';
-    search( $Lo_Valsi[0], 0 );
+    search($Lo_Valsi[0], 0);
 }
 
 END {
@@ -136,7 +140,7 @@ sub decompose {
             \z
         }cgx
         ) {
-            maybe_push_rafsi( \@words, $1 );
+            maybe_push_rafsi(\@words, $1);
             last LOOP;
         }
 
@@ -151,7 +155,7 @@ sub decompose {
         ) {
             my $rafsi = $1;
             $prev_match += length($rafsi) + 1;
-            maybe_push_rafsi( \@words, $rafsi );
+            maybe_push_rafsi(\@words, $rafsi);
             redo LOOP;
         }
 
@@ -163,7 +167,7 @@ sub decompose {
         ) {
             my $rafsi = $1;
             $prev_match += length($rafsi) + 1;
-            maybe_push_rafsi( \@words, $rafsi );
+            maybe_push_rafsi(\@words, $rafsi);
             redo LOOP;
         }
 
@@ -178,15 +182,15 @@ sub decompose {
         ) {
             my $rafsi = $1;
             $prev_match += length($rafsi);
-            maybe_push_rafsi( \@words, $rafsi );
+            maybe_push_rafsi(\@words, $rafsi);
             redo LOOP;
         }
 
         die "mitysisku: unparsable input |$The_Word| (@words)\n",
-          " " x ( pos // 0 + $prev_match + 29 ), "^\n";
+          " " x (pos // 0 + $prev_match + 29), "^\n";
     }
 
-    search( $_, $Flag_Recurse ) for @words;
+    search($_, $Flag_Recurse) for @words;
 }
 
 sub emit_help {
@@ -206,6 +210,9 @@ Lojban word lookup tool. Options include:
         increase the recursion depth. Recursion is disabled when
         performing a gismu search via rafsi (via -g or on no match).
 
+  -t    Search for words of the given type (e.g. cmavo, ...)
+  -s    Search by selmaho.
+
 Piping to less(1) may require `less -R` due to the terminal escape
 codes used.
 
@@ -215,14 +222,14 @@ END_USAGE
 
 sub gismu_or_cmavo {
     my ($word) = @_;
-    if ( length $word == 5 ) {
+    if (length $word == 5) {
         # gismu are five letters (and hopefully nothing else)
         return (
-            $dbh->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
+            $dbh->selectcol_arrayref("SELECT word FROM jbo WHERE word = ?", {}, $word))
           ->[0];
     }
     my $found;
-    if ( length $word == 4 and $word !~ m/'/ ) {
+    if (length $word == 4 and $word !~ m/'/) {
         # truncated gism aka 4-letter rafsi?
         $found = (
             $dbh->selectcol_arrayref(
@@ -233,15 +240,13 @@ sub gismu_or_cmavo {
     } else {
         # assume a CCV, CVC or CVV form
         $found = (
-            $dbh->selectcol_arrayref(
-                "SELECT word FROM rafsi WHERE rafsi = ?", {}, $word
-            )
-        )->[0];
+            $dbh->selectcol_arrayref("SELECT word FROM rafsi WHERE rafsi = ?", {}, $word))
+          ->[0];
     }
-    if ( !defined $found ) {
+    if (!defined $found) {
         # perhaps it's a cmavo?
-        $found = (
-            $dbh->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
+        $found =
+          ($dbh->selectcol_arrayref("SELECT word FROM jbo WHERE word = ?", {}, $word))
           ->[0];
     }
     return $found;
@@ -254,7 +259,7 @@ sub hify {
 }
 
 sub maybe_push_rafsi {
-    my ( $aref, $rafsi ) = @_;
+    my ($aref, $rafsi) = @_;
     my $gismu = gismu_or_cmavo($rafsi);
     die "mitysisku: unknown rafsi |$rafsi| in |$The_Word|\n"
       unless defined $gismu;
@@ -270,14 +275,13 @@ sub render_en {
     # for 'return' found 'klakla' but missed the simpler 'xruti'
     $row->{type} = (
         $dbh->selectcol_arrayref(
-            "SELECT type FROM jbo WHERE word=?",
-            {}, $row->{valsi}
+            "SELECT type FROM jbo WHERE word=?", {}, $row->{valsi}
         )
     )->[0];
 
     $row->{sense} = $row->{sense} ? ' - ' . $row->{sense} : '';
 
-    say $row->{word}, $row->{sense}, ' - ', bold( hify( $row->{valsi} ) ), ' (',
+    say $row->{word}, $row->{sense}, ' - ', bold(hify($row->{valsi})), ' (',
       $row->{type}, ')';
 
     return;
@@ -286,14 +290,15 @@ sub render_en {
 sub render_jbo {
     my ($row) = @_;
 
-    say bold( hify( $row->{word} ) ) . "\t("
-      . $row->{type} . ")\n\t"
-      . ( $row->{definition} // '(no definition provided)' );
+    say bold(hify($row->{word})) . "\t("
+      . $row->{type}
+      . ($row->{selmaho} ? ', ' . $row->{selmaho} : '') . ")\n\t"
+      . ($row->{definition} // '(no definition provided)');
 
     my $rafsi =
       $dbh->selectcol_arrayref(
         "SELECT rafsi FROM rafsi WHERE word = ? ORDER BY rafsi",
-        {}, $row->{word} );
+        {}, $row->{word});
     if ($rafsi->@*) {
         $row->{rafsi} = join ' ', map { bold($_) } $rafsi->@*;
     }
@@ -303,10 +308,10 @@ sub render_jbo {
     }
 
     my $related =
-      $dbh->selectcol_arrayref( "SELECT rel FROM rel WHERE word = ? ORDER BY rel",
-        {}, $row->{word} );
+      $dbh->selectcol_arrayref("SELECT rel FROM rel WHERE word = ? ORDER BY rel",
+        {}, $row->{word});
     if ($related->@*) {
-        say "\tRELAT ", join ' ', map { bold( hify($_) ) } $related->@*;
+        say "\tRELAT ", join ' ', map { bold(hify($_)) } $related->@*;
     }
 
     print "\n";
@@ -315,41 +320,43 @@ sub render_jbo {
 }
 
 sub search {
-    my ( $word, $depth ) = @_;
+    my ($word, $depth) = @_;
 
     state %seen;
     $seen{$word}++;
 
-    my $type = '';
-    if ( defined $Flag_Type ) {
-        $type = 'type = ' . $dbh->quote($Flag_Type) . ' and ';
+    my $only = '';
+    if (defined $Flag_Type) {
+        $only = 'type = ' . $dbh->quote($Flag_Type) . ' AND ';
+    } elsif (defined $Flag_Selmaho) {
+        $only = 'selmaho = ' . $dbh->quote($Flag_Selmaho) . ' AND ';
     }
 
     my $sth =
       $dbh->prepare(
-        "SELECT * FROM $source WHERE $type $Search_Field $Flag_Method ? ORDER BY word");
+        "SELECT * FROM $source WHERE $only $Search_Field $Flag_Method ? ORDER BY word");
 
-    if ( $Flag_Method eq 'LIKE' and $word !~ m/[%_]/ ) {
+    if ($Flag_Method eq 'LIKE' and $word !~ m/[%_]/) {
         $word = '%' . $word . '%';
     }
     $sth->execute($word);
 
     my @more;
-    while ( my $row = $sth->fetchrow_hashref ) {
+    while (my $row = $sth->fetchrow_hashref) {
         $Words_Found++;
         eval {
             my $related = $render_by->($row);
-            if ( $depth > 0 and $related ) {
+            if ($depth > 0 and $related) {
                 for my $another ($related->@*) {
                     push @more, $another unless $seen{$another}++;
                 }
             }
         };
         if ($@) {
-            die "mitysisku: $@\n" . Data::Dumper->Dump( [$row], ['row'] );
+            die "mitysisku: $@\n" . Data::Dumper->Dump([$row], ['row']);
         }
     }
     for my $another (@more) {
-        search( $another, $depth - 1 );
+        search($another, $depth - 1);
     }
 }
