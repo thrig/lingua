@@ -327,9 +327,11 @@ sub search {
 
     my $only = '';
     if (defined $Flag_Type) {
-        $only = 'type = ' . $dbh->quote($Flag_Type) . ' AND ';
+        my $meth = $Flag_Type =~ m/[%_]/ ? ' LIKE ' : ' = ';
+        $only = 'type' . $meth . $dbh->quote($Flag_Type) . ' AND ';
     } elsif (defined $Flag_Selmaho) {
-        $only = 'selmaho = ' . $dbh->quote($Flag_Selmaho) . ' AND ';
+        my $meth = $Flag_Selmaho =~ m/[%_]/ ? ' LIKE ' : ' = ';
+        $only = 'selmaho' . $meth . $dbh->quote($Flag_Selmaho) . ' AND ';
     }
 
     my $sth =
