@@ -12,11 +12,14 @@ assuming unix at the command line
 
 required packages for OpenBSD
 
-    doas pkg_add espeak ffmpeg ghc node
+    doas pkg_add espeak ffmpeg ghc node sox
     make depend
 
 rumor has it node (in camxes) is called something else on Linux;
-portability has not been tested beyond OpenBSD 6.4 and Mac OS X 10.11
+portability has not been tested beyond OpenBSD and Mac OS X 10.11
 
-see also the Lingua::Awkwords perl module which is a more complicated
-yet more flexible method to perform the same work as sitelen-sin.c
+see also
+
+ * the Lingua::Awkwords perl module which is a more complicated yet more
+   flexible method to perform the same work as sitelen-sin.c
+ * https://github.com/thrig/krefu for a small flashcard program
