@@ -13,4 +13,5 @@ requires 'Text::Levenshtein';
 requires 'Text::Metaphone';
 requires 'Text::WagnerFischer';
 requires 'Text::Unidecode';
+requires 'Unix::ScriptUtil';
 requires 'XML::Twig';

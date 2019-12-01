@@ -1,28 +1,33 @@
 #!/usr/bin/env perl
 #
-# say-jbo - espeak wrapper for audioizing lojban phrases
+# say-jbo - phrase to lojban audio. needs espeak, sox, ffmpeg installed
 
-use 5.24.0;
-use File::Spec ();
-use Text::Unidecode qw(unidecode);
+use 5.26.0;
+use warnings;
+use File::Spec::Functions qw(catdir catfile);
+use Unix::ScriptUtil qw(cd brun);
 
-my $bridi    = "@ARGV";
-my $filename = $bridi;
+my $dir = catdir $ENV{HOME}, 'tmp';
+cd $dir;
+
+my $bridi = "@ARGV";
 
 # allow ni'o or whatnot to be input as niho
 $bridi =~ tr/h/'/;
 
-$filename = lc unidecode($filename);
-$filename =~ s/[^a-z0-9_]//g;
-$filename = substr $filename, 0, 64;
-$filename .= '.wav';
+my $basename = $bridi;
+tr/'/h/, s/[^A-Za-z0-9._-]//g, $_ = lc for $basename;
 
-my $wav = File::Spec->catfile( File::Spec->tmpdir, $filename );
+my $wav = $basename . '.wav';
+my $nor = $basename . '.nor';
+my $mp3 = $basename . '.mp3';
 
-my $ret = system qw(espeak -v other/jbo -w), $wav, $bridi;
-die "espeak failed: $?\n" if $ret != 0;
+if (!-e $mp3) {
+    brun qw(espeak -v other/jbo -w), $wav, $bridi;
+    brun qw(sox --norm), $wav, qw(-b 16 -t wav), $nor, qw(rate 44100 dither -s);
+    brun qw(ffmpeg -f wav -i), $nor, $mp3;
+    unlink $wav, $nor;
+}
 
-# TWEAK try afplay on Mac OS X
-# TODO is there a better player on OpenBSD
-exec qw(ffplay -autoexit -loglevel quiet -nodisp -hide_banner), $wav;
-die "could not exec audio player: $!\n";
+brun qw(play -q), $mp3;
+say catfile($dir, $mp3);

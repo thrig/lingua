@@ -1,0 +1,35 @@
+#!/usr/bin/env perl
+#
+# say-es - phrase to Spanish audio. for Mac OS X (because the 2009
+# macbook hasn't died yet). needs ffmpeg and sox (e.g. from MacPorts)
+
+use 5.26.0;
+use warnings;
+use Encode;
+use File::Spec::Functions qw(catdir catfile);
+use Text::Unidecode qw(unidecode);
+use Unix::ScriptUtil qw(cd brun);
+
+my $dir = catdir $ENV{HOME}, 'tmp';
+cd $dir;
+
+my $basename = unidecode decode('UTF-8', "@ARGV", Encode::FB_CROAK);
+s/[^A-Za-z0-9._-]//g, $_ = lc, for $basename;
+
+my $mp4 = $basename . '.mp4';
+my $wav = $basename . '.wav';
+my $nor = $basename . '.nor';
+my $mp3 = $basename . '.mp3';
+
+if (!-e $mp3) {
+    # KLUGE say(1) claims WAVE output support but errors out with
+    # "Opening output file failed: fmt?"
+    brun qw(say -v Juan -o),   $mp4, @ARGV;
+    brun qw(ffmpeg -f mp4 -i), $mp4, $wav;
+    brun qw(sox --norm), $wav, qw(-b 16 -t wav), $nor, qw(rate 44100 dither -s);
+    brun qw(ffmpeg -f wav -i), $nor, $mp3;
+    unlink $mp4, $wav, $nor;
+}
+
+brun 'afplay', $mp3;
+say catfile($dir, $mp3);
