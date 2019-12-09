@@ -23,9 +23,9 @@ my $nor = $basename . '.nor';
 my $mp3 = $basename . '.mp3';
 
 if (!-e $mp3) {
-    brun qw(espeak -v other/jbo -w), $wav, $bridi;
-    brun qw(sox --norm), $wav, qw(-b 16 -t wav), $nor, qw(rate 44100 dither -s);
-    brun qw(ffmpeg -f wav -i), $nor, $mp3;
+    brun qw[espeak -v other/jbo -w], $wav, $bridi;
+    brun qw[sox -q --norm], $wav, qw[-b 16 -t wav], $nor, qw[rate 44100 dither -s];
+    brun qw[ffmpeg -loglevel error -f wav -i], $nor, $mp3;
     unlink $wav, $nor;
 }
 

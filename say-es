@@ -24,10 +24,11 @@ my $mp3 = $basename . '.mp3';
 if (!-e $mp3) {
     # KLUGE say(1) claims WAVE output support but errors out with
     # "Opening output file failed: fmt?"
-    brun qw(say -v Juan -o),   $mp4, @ARGV;
-    brun qw(ffmpeg -f mp4 -i), $mp4, $wav;
-    brun qw(sox --norm), $wav, qw(-b 16 -t wav), $nor, qw(rate 44100 dither -s);
-    brun qw(ffmpeg -f wav -i), $nor, $mp3;
+    brun qw[say -v Juan -o], $mp4, @ARGV;
+    brun qw[ffmpeg -loglevel error -f mp4 -i], $mp4, $wav;
+    brun qw[sox -q --norm], $wav, qw[-b 16 -t wav], $nor,
+      qw[rate 44100 dither -s];
+    brun qw[ffmpeg -loglevel error -f wav -i], $nor, $mp3;
     unlink $mp4, $wav, $nor;
 }
 
