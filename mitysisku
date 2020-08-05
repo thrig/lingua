@@ -20,7 +20,7 @@ my $Flag_SearchDefinition = 0;
 Getopt::Long::Configure("bundling");
 GetOptions(
     'definition|D' => sub { $Flag_Method = 'LIKE'; $Flag_SearchDefinition = 1 },
-    'equal|eq|e'  => sub { $Flag_Method = '=' },
+    'equal|eq|e'   => sub { $Flag_Method = '=' },
     'gismuify|g'  => \my $Flag_Gismu,
     'help|h|?'    => \&emit_help,
     'hify|H'      => \my $Flag_Hify,
@@ -34,7 +34,7 @@ emit_help() if $Flag_Selmaho and $Flag_Type;
 
 $Flag_Recurse //= 0;
 
-my $The_Word = shift // emit_help();
+my $The_Word = shift // ($Flag_Selmaho ? '%' : emit_help());
 my $lang     = shift // 'jbo';
 
 my $Search_Field = 'word';
