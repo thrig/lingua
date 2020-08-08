@@ -38,6 +38,7 @@ my $The_Word = shift // ($Flag_Selmaho ? '%' : emit_help());
 my $lang     = shift // 'jbo';
 
 my $Search_Field = 'word';
+$Flag_Method = 'LIKE' if $The_Word =~ m/%/;
 
 my $render_by;
 
