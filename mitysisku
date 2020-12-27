@@ -21,13 +21,13 @@ Getopt::Long::Configure("bundling");
 GetOptions(
     'definition|D' => sub { $Flag_Method = 'LIKE'; $Flag_SearchDefinition = 1 },
     'equal|eq|e'   => sub { $Flag_Method = '=' },
-    'gismuify|g'  => \my $Flag_Gismu,
-    'help|h|?'    => \&emit_help,
-    'hify|H'      => \my $Flag_Hify,
-    'like|l'      => sub { $Flag_Method = 'LIKE' },
-    'recurse|R+'  => \my $Flag_Recurse,
-    'selmaho|s=s' => \my $Flag_Selmaho,
-    'type|t=s'    => \my $Flag_Type,
+    'gismuify|g'   => \my $Flag_Gismu,
+    'help|h|?'     => \&emit_help,
+    'hify|H'       => \my $Flag_Hify,
+    'like|l'       => sub { $Flag_Method = 'LIKE' },
+    'recurse|R+'   => \my $Flag_Recurse,
+    'selmaho|s=s'  => \my $Flag_Selmaho,
+    'type|t=s'     => \my $Flag_Type,
 ) or exit 64;
 
 emit_help() if $Flag_Selmaho and $Flag_Type;
@@ -81,7 +81,7 @@ if ($Words_Found == 0 and $lang eq 'jbo' and !$Flag_SearchDefinition) {
     } elsif (length $The_Word > 4) {
         # lujvo must be at least six characters but need to support
         # exactly five if the user gave us a gismu here
-        decompose($The_Word);
+        search($_, $Flag_Recurse) for decompose($The_Word);
     }
 }
 
@@ -191,7 +191,8 @@ sub decompose {
           " " x (pos // 0 + $prev_match + 29), "^\n";
     }
 
-    search($_, $Flag_Recurse) for @words;
+    die "no words parsed??" unless @words;
+    return @words;
 }
 
 sub emit_help {
@@ -291,9 +292,15 @@ sub render_en {
 sub render_jbo {
     my ($row) = @_;
 
+    my $decomp = '';
+    if ($row->{type} eq 'lujvo') {
+        eval { $decomp = ' ' . join ' ', decompose($row->{word}) };
+    }
+
     say bold(hify($row->{word})) . "\t("
       . $row->{type}
-      . ($row->{selmaho} ? ', ' . $row->{selmaho} : '') . ")\n\t"
+      . ($row->{selmaho} ? ', ' . $row->{selmaho} : '')
+      . ")$decomp\n\t"
       . ($row->{definition} // '(no definition provided)');
 
     my $rafsi =
