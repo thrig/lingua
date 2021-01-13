@@ -292,24 +292,29 @@ sub render_en {
 sub render_jbo {
     my ($row) = @_;
 
-    my $decomp = '';
+    my (@gismu, $rafsi);
     if ($row->{type} eq 'lujvo') {
-        eval { $decomp = ' ' . join ' ', decompose($row->{word}) };
+        eval { @gismu = decompose($row->{word}) };
+        for my $g (@gismu) {
+            my $r = $dbh->selectcol_arrayref(
+                "SELECT rafsi FROM rafsi WHERE word = ? ORDER BY rafsi",
+                {}, $g);
+            push @$rafsi, $r->@* ? $r->@* : '-';
+        }
+    } else {
+        $rafsi =
+          $dbh->selectcol_arrayref(
+            "SELECT rafsi FROM rafsi WHERE word = ? ORDER BY rafsi",
+            {}, $row->{word});
     }
 
     say bold(hify($row->{word})) . "\t("
       . $row->{type}
-      . ($row->{selmaho} ? ', ' . $row->{selmaho} : '')
-      . ")$decomp\n\t"
+      . ($row->{selmaho} ? ', ' . $row->{selmaho} : '') . ")"
+      . (@gismu ? ' ' . join ' ', map { bold($_) } @gismu : '') . "\n\t"
       . ($row->{definition} // '(no definition provided)');
 
-    my $rafsi =
-      $dbh->selectcol_arrayref(
-        "SELECT rafsi FROM rafsi WHERE word = ? ORDER BY rafsi",
-        {}, $row->{word});
-    if ($rafsi->@*) {
-        $row->{rafsi} = join ' ', map { bold($_) } $rafsi->@*;
-    }
+    $row->{rafsi} = join ' ', map { bold($_) } $rafsi->@* if $rafsi->@*;
 
     for my $field (qw/gloss rafsi notes/) {
         say "\t" . uc($field) . " " . $row->{$field} if defined $row->{$field};
@@ -318,9 +323,8 @@ sub render_jbo {
     my $related =
       $dbh->selectcol_arrayref("SELECT rel FROM rel WHERE word = ? ORDER BY rel",
         {}, $row->{word});
-    if ($related->@*) {
-        say "\tRELAT ", join ' ', map { bold(hify($_)) } $related->@*;
-    }
+
+    say "\tRELAT ", join ' ', map { bold(hify($_)) } $related->@* if $related->@*;
 
     print "\n";
 
