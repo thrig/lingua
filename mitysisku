@@ -295,6 +295,7 @@ sub render_jbo {
     my (@gismu, $rafsi);
     if ($row->{type} eq 'lujvo') {
         eval { @gismu = decompose($row->{word}) };
+        $rafsi = [];
         for my $g (@gismu) {
             my $r = $dbh->selectcol_arrayref(
                 "SELECT rafsi FROM rafsi WHERE word = ? ORDER BY rafsi",
@@ -314,7 +315,8 @@ sub render_jbo {
       . (@gismu ? ' ' . join ' ', map { bold($_) } @gismu : '') . "\n\t"
       . ($row->{definition} // '(no definition provided)');
 
-    $row->{rafsi} = join ' ', map { bold($_) } $rafsi->@* if $rafsi->@*;
+    $row->{rafsi} = join ' ', map { $_ eq '-' ? '-' : bold($_) } $rafsi->@*
+      if $rafsi->@*;
 
     for my $field (qw/gloss rafsi notes/) {
         say "\t" . uc($field) . " " . $row->{$field} if defined $row->{$field};
