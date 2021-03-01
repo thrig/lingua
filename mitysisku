@@ -344,8 +344,11 @@ sub search {
         my $meth = $Flag_Type =~ m/[%_]/ ? ' LIKE ' : ' = ';
         $only = 'type' . $meth . $dbh->quote($Flag_Type) . ' AND ';
     } elsif (defined $Flag_Selmaho) {
-        my $meth = $Flag_Selmaho =~ m/[%_]/ ? ' LIKE ' : ' = ';
-        $only = 'selmaho' . $meth . $dbh->quote($Flag_Selmaho) . ' AND ';
+        # selma'o always uses LIKE so can type "bai" instead of "BAI"
+        # and otherwise not have to match the awkward to type "upper
+        # case, except for the h and a few other things" convention on
+        # the word class names
+        $only = 'selmaho LIKE ' . $dbh->quote($Flag_Selmaho) . ' AND ';
     }
 
     my $sth =
