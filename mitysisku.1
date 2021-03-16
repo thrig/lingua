@@ -1,4 +1,4 @@
-.Dd August  5 2019
+.Dd March 15 2021
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -8,7 +8,9 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl DegHlR
+.Op Fl DegHlRx
+.Op Fl s Ar selma'o
+.Op Fl t Ar type
 .Ar word
 .Op Ar en|jbo
 .Ek
@@ -82,7 +84,9 @@ or
 The exact list of types can be obtained from the underlying database via
 a query such as
 .Pp
-.Dl Ic select distinct(type) from jbo order by type;
+.Dl Ic SELECT DISTINCT(type) FROM jbo ORDER BY type;
+.It Fl x
+Excludes experimental words from the result.
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -106,13 +110,6 @@ or to depart from official form in the output
 .Dl $ Ic mitysisku -H -e laho
 .Dl ...
 .Pp
-Recursive search on anything containing
-.Sy tricu
-and also any related terms to those hits. Send to pager with support for
-terminal escape codes.
-.Pp
-.Dl $ Ic mitysisku -R tricu \&| less -R
-.Pp
 The difference between a gismu and not-gismu search may be illustrated
 by...look, squirrel!
 .Pp
@@ -133,8 +130,12 @@ in its definition but forgot it was
 .Pp
 All matches for a given selma'o can be made via:
 .Pp
-.Dl $ Ic mitysisku -s KOhA3 -l '%'
+.Dl $ Ic mitysisku -s koha3 -l '%'
 .Dl ...
+.Pp
+This is case insensitive as typing 
+.Qq KOhA3
+exactly would be annoying.
 .Pp
 .Nm
 tries to parse cmavo compounds and lujvo but is by no means perfect at

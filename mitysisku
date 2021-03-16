@@ -29,6 +29,7 @@ GetOptions(
     'recurse|R+'   => \my $Flag_Recurse,
     'selmaho|s=s'  => \my $Flag_Selmaho,
     'type|t=s'     => \my $Flag_Type,
+    'x'            => \my $Flag_NoExperimental,
 ) or exit 64;
 
 emit_help() if $Flag_Selmaho and $Flag_Type;
@@ -241,6 +242,8 @@ Lojban word lookup tool. Options include:
   -t    Search for words of the given type (e.g. cmavo, ...)
   -s    Search by selmaho.
 
+  -x    Exclude experimental words.
+
 Piping to less(1) may require `less -R` due to the terminal escape
 codes used.
 
@@ -397,6 +400,10 @@ sub search {
 
     my @more;
     while ( my $row = $sth->fetchrow_hashref ) {
+        next
+          if $Flag_NoExperimental
+          and exists $row->{type}
+          and $row->{type} =~ m/experimental/;
         $Words_Found++;
         eval {
             my $related = $render_by->($row);
