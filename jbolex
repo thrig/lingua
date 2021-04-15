@@ -1,0 +1,319 @@
+#!/usr/bin/env perl
+#
+# jbolex - try to lex Lojbanic words, or a subset thereof. adapted from
+# CCL[1] chapters 3, 4, and other sections. motivated by a #lojban
+# discussion concerning {migleki} parsing into either {mi gleki}
+# (camxes, and probably some humans) or {migle ki} (a different parser
+# under consideration) or even failing to parse (my current version of
+# mitysisku, which is bad at cmavo). penultimate stress was mentioned,
+# which {migléki} has but {coirodo} does not
+#
+#   "However, a detailed algorithm for breaking sounds into words has
+#   not yet been fully debugged" -- CLL 4.1 p.49
+#
+# [1] CLL in this file indicates "cll_v1.1_book.pdf" or in general "The
+#     Complete Lojban Language" by John Woldemar Cowan, though that may
+#     vary from the specific PDF file
+
+use strict;
+use warnings;
+use Cpanel::JSON::XS ();
+use Regexp::Assemble ();
+use Test::Differences 'eq_or_diff';
+use Test::More;
+
+########################################################################
+#
+# VARIABLES
+#
+#  * %Sets -- name to list reference of various characters or strings.
+#    the names are either taken from CLL (V, C/CC, etc) or have been
+#    made up. the names MUST NOT match any characters in the ALL set
+#  * %Regex -- compiled regex of the Sets
+#  * %Restring -- as previous but in as_string form for cleaner (ha!)
+#    export to JSON or subsequent use in PCRE or whatever
+#
+# in other words:
+#
+#   $Sets{"CAT"}     = [qw(m l a t u)];
+#   $Regex{"CAT"}    = qr/(?^u:[almtu]/;    # (or something like that)
+#   $Restring{"CAT"} = "[almtu]";
+
+my ( %Sets, %Regex, %Restring );
+
+sub set($@) {
+    my $name = shift;
+    $Sets{$name} = [@_];
+
+    # KLUGE escape . (and other things) so that "." to the regex does
+    # not become qr/./ which matches too much for our needs
+    my @list;
+    push @list, quotemeta($_) for @_;
+
+    my $re = Regexp::Assemble->new->add(@list);
+    $Regex{$name}    = $re->re;
+    $Restring{$name} = $re->as_string;
+}
+
+########################################################################
+#
+# BASIC DEFINITIONS
+
+# CLL 3.1
+set ALL => "'", ",", ".", qw(a b c d e f g i j k l m n o p r s t u v x y z);
+
+# CLL 4.1 - vowels (excludes .y. by definition)
+set V    => qw(a e i o u);
+set VALL => qw(a e i o u y);
+
+# CLL 3.5
+set V_PAIR => qw(
+  a'a a'e a'i a'o a'u a'y
+  e'a e'e e'i e'o e'u e'y
+  i'a i'e i'i i'o i'u i'y
+  o'a o'e o'i o'o o'u o'y
+  u'a u'e u'i u'o u'u u'y
+  y'a y'e y'i y'o y'u y'y
+);
+
+# CLL 4.1 - vowel pairs
+set VV => qw(
+  ai ei oi au
+  a'a a'e a'i a'o a'u
+  e'a e'e e'i e'o e'u
+  i'a i'e i'i i'o i'u
+  o'a o'e o'i o'o o'u
+  u'a u'e u'i u'o u'u
+);
+
+# CLL 3.4
+set DIPHTHONG => qw(ai ei oi au ia ie ii io iu ua ue ui uo uu iy uy);
+
+# consonants minus ' which CLL 3.3 explains why is isn't h
+set C => qw(b c d f g j k l m n p r s t v x z);
+
+# CLL 3.6
+set C_VOICED   => qw(b d g v j z);
+set C_UNVOICED => qw(p t k f c s x);
+set C_SYLLABIC => qw(l m n r);
+
+# are the consonant subsets complete?
+is( @{ $Sets{C_VOICED} } + @{ $Sets{C_UNVOICED} } + @{ $Sets{C_SYLLABIC} },
+    scalar @{ $Sets{C} } );
+
+# permissible consonant pairs, which differ from the subsequent
+set "C/C" => make_c_pairs();
+
+# CLL 3.7 and CLL 4.1 - permissible initial consonant pairs
+set CC => qw(
+  pl pr
+  fl fr
+  bl br
+  vl vr
+  cp cf
+  ct ck cm cn
+  cl cr
+  jb jv
+  jd jg jm
+  sp sf
+  st sk sm sn
+  sl sr
+  zb zv
+  zd zg zm
+  tc tr
+  ts
+  kl kr
+  dj dr dz
+  gl gr
+  ml mr
+  xl xr
+);
+# CLL 3.7 p.40 claims that there are 48 of these
+is( @{ $Sets{CC} }, 48 );
+
+# CLL 3.7 p.38 and CLL 4.1 p.50
+#
+# "consonant triples can occur medially in Lojban words" with
+# restrictions:
+#   1. first two must be permissible pair (C/C)
+#   2. last two must be permissible initial consonant pair (CC)
+#   3. qw(ndj ndz ntc nts) are verboten
+# (there are complications involving names or cmene, see below)
+#
+# brute force this--minus the bad triples iterate all C/C and use each
+# last character to find all CC that start with said
+set BAD_TRIPLE => qw(ndj ndz ntc nts);
+
+{
+    my @ccc;
+    for my $chpair ( @{ $Sets{"C/C"} } ) {
+        my ( $first, $last ) = split '', $chpair;
+        for my $cc ( @{ $Sets{"CC"} } ) {
+            if ( $cc =~ m{^$last} ) {
+                my $triple = "$first$cc";
+                next if $triple =~ m{^$Regex{BAD_TRIPLE}};
+                push @ccc, $triple;
+            }
+        }
+    }
+    set "C/CC" => @ccc;
+}
+
+########################################################################
+#
+# ON WORDS (but not names)
+
+# brivla -- CLL 4.3 p.52
+#   1. always end in a vowel (unlike cmene)
+#   2. always contain a consonant pair in the first five letters (y and
+#      ' are not counted as letters for this purpose)
+#   3. always are stressed on penultimate syllable (thus they have two
+#      or more syllables)
+#
+# could be a CC or a C/C consonant pair... is CC a subset of C/C?
+{
+    my ( %ccall, %cslash );
+    @ccall{ @{ $Sets{CC} }, @{ $Sets{"C/C"} } } = ();
+    @cslash{ @{ $Sets{"C/C"} } } = ();
+    eq_or_diff( \%ccall, \%cslash, "CC not subset of C/C" );
+}
+
+# so a lexer might run something like (after [.,], \s+, and etc have
+# been dealt with)
+for my $s ( qw(migleki coigleki coirodo), "mi'agleki" ) {
+    my $copy = $s;
+    $copy =~ tr/'y//d;
+    my $five = substr( $copy, 0, 5 );
+    if ( $five =~ m{$Regex{"C/C"}} ) {
+        # but there still could be a cmavo of most forms (everything
+        # except the longer experimental suff?) at the head
+        diag("BRIVLA?\t|$five| $s");
+
+        # TODO maybe match a cmavo... but if we're doing that in both
+        # branches why not always do that first?
+
+        # gismu are CVC/CV CCVCV
+    } else {
+        diag("CMAVO?\t|$five| $s");
+
+        # TODO parse a cmavo, advance string, try again
+    }
+}
+
+# cmavo - V, .y., CV, VV, CVV + experimentals which are three or more
+# vowels in a row, or a single consonant followed by three or more
+#
+# ".y. must have pauses before and after it"
+#
+# also Cy (CLL 17 p.397)
+#
+# cmavo of VV-form also include
+#   ia ie ii io iu
+#   ua ue ui uo uu
+#
+# as in {.ii since}
+
+# TODO does a gismu matcher built from CVC/CV or CCVCV match all gismu
+# available in the dictionary? (or things that it should not?)
+my $gismu_re = '(?:' . join( '|',
+    join( '', map { $Restring{$_} } qw(C V C/C V) ),
+    join( '', map { $Restring{$_} } qw(CC V C V) ) ) . ')';
+diag $gismu_re;
+
+# candidate #2 should be same as the previous?
+my $cvccv = join( '', map { $Restring{$_} } qw(C V C/C V) );
+my $ccvcv = join( '', map { $Restring{$_} } qw(CC V C V) );
+my $re = Regexp::Assemble->new->add($cvccv, $ccvcv)->anchor_line_begin;
+diag $re->as_string;
+
+########################################################################
+#
+# PARTING TESTS
+
+{
+    my ( @bad_re, @empty );
+    for my $key ( keys %Sets ) {
+        my $set = $Sets{$key};
+
+        # any illegal set names?
+        push @bad_re, $key if $key =~ m{$Regex{ALL}};
+
+        # any empty sets because you renamed something?
+        push @empty, $key unless @$set;
+    }
+    eq_or_diff( \@bad_re, [], "illegal set name" );
+    eq_or_diff( \@empty,  [], "empty set" );
+}
+
+done_testing;
+
+########################################################################
+#
+# EXPORT
+
+my $json = Cpanel::JSON::XS->new->ascii->pretty->canonical(1);
+open my $fh, '>', "jbolex.json" or die "open failed 'jbolex.json': $!\n";
+print $fh $json->encode(
+    [   sets  => \%Sets,
+        regex => \%Restring,
+    ]
+);
+
+########################################################################
+#
+# SUBROUTINES
+
+# make the C/C pairs which differ from the CC pairs (a shorter static
+# list copied out of CLL, above)
+sub make_c_pairs {
+    my $cjsz   = qr/[cjsz]/;
+    my $cx_etc = qr/(?:cx|kx|xc|mz)/;
+
+    my @pairs;
+    # pairs of consonants have restrictions:
+    for my $x ( @{ $Sets{C} } ) {
+        for my $y ( @{ $Sets{C} } ) {
+            #   1. no doubling (ll, ss, kk, etc)
+            next if $x eq $y;
+
+            #   2. no mixing voiced and unvoiced
+            next
+              if $x  =~ m{$Regex{C_VOICED}}
+              and $y =~ m{$Regex{C_UNVOICED}};
+            next
+              if $x  =~ m{$Regex{C_UNVOICED}}
+              and $y =~ m{$Regex{C_VOICED}};
+
+            #   3. both cannot be from c, j, s, z
+            next if $x =~ m{^$cjsz} and $y =~ m{^$cjsz};
+
+            my $p = "$x$y";
+
+            #   4. cx, kx, xc, mz are forbidden
+            next if $p =~ m{^$cx_etc$};
+
+            push @pairs, $p;
+        }
+    }
+    return @pairs;
+}
+
+########################################################################
+#
+# THIS IS THE END MY ONLY FRIEND THE
+
+__END__
+ * "periods are included only as an aid to the reader"
+ * comma is a break indicator--remove, or pass along as garbage?
+
+ * cmene -- "names can begin or end with any permissible consonant pair,
+   and can have triples anywhere, provided the pairs are permissible"
+   (CLL p.40). so that complicates parsing, as you would really need to
+   know whether a name is expected due to a {la} or such prior. a name
+   should have a trailing consonant at the end, but who knows where that
+   end might be lacking the clue of " " or ". " before the next word
+
+   .y. does that mean any CC pair anywhere is okay in a name, so a
+   "(C[C)C]" and not the more specific "C/CC" triple? or by triples do
+   they mean C/CC? ... I'm going to ignore names until I get other
+   things to a somewhat not broken state
