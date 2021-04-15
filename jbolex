@@ -14,18 +14,31 @@
 # [1] CLL in this file indicates "cll_v1.1_book.pdf" or in general "The
 #     Complete Lojban Language" by John Woldemar Cowan, though that may
 #     vary from the specific PDF file
+#
+# related projects:
+#   https://github.com/lojban/jbofihe
+#   https://github.com/La-Lojban/free-gismu-space
+#
+# TODO check outputs of this code against those
 
+use strict;
+use warnings;
 use Cpanel::JSON::XS ();
+use DBI;
 use Getopt::Long qw(GetOptions);
 use Regexp::Assemble ();
 use Test2::API qw(test2_add_callback_testing_done);
 use Test2::Bundle::More;
 use Test2::Tools::Compare;
 
+# see lefanva for how to set this up
+my $dbh = DBI->connect( "dbi:SQLite:dbname=$ENV{HOME}/share/lojban/en.db",
+    '', '', { AutoCommit => 1, RaiseError => 1 } );
+
 GetOptions( 'export' => \my $Flag_Export, 'test' => \my $Flag_Test ) or exit 1;
 
-plan(6);
 $Flag_Test = 1 if $Flag_Export;
+plan(6)        if $Flag_Test;
 
 sub set($@);
 
@@ -102,7 +115,7 @@ is( @{ $Sets{C_VOICED} } + @{ $Sets{C_UNVOICED} } + @{ $Sets{C_SYLLABIC} },
 
 # helper regex for the subsequent pair making
 set CJSZ   => qw(c j s z);
-set CX_ETC => qw(cx kx xc mz);
+set CX_ETC => qw(cx kx xc xk mz);
 
 # permissible consonant pairs, which differ from the subsequent
 set "C/C" => make_c_pairs();
@@ -183,23 +196,25 @@ set BAD_TRIPLE => qw(ndj ndz ntc nts);
 
 # so a lexer might run something like (after [.,], \s+, and etc have
 # been dealt with)
-for my $s ( qw(migleki coigleki coirodo), "mi'agleki" ) {
-    my $copy = $s;
-    $copy =~ tr/'y//d;
-    my $five = substr( $copy, 0, 5 );
-    if ( $five =~ m{$Regex{"C/C"}} ) {
-        # but there still could be a cmavo of most forms (everything
-        # except the longer experimental suff?) at the head
-        diag("BRIVLA?\t|$five| $s");
+if (0) {
+    for my $s ( qw(migleki coigleki coirodo), "mi'agleki" ) {
+        my $copy = $s;
+        $copy =~ tr/'y//d;
+        my $five = substr( $copy, 0, 5 );
+        if ( $five =~ m{$Regex{"C/C"}} ) {
+            # but there still could be a cmavo of most forms (everything
+            # except the longer experimental suff?) at the head
+            diag("BRIVLA?\t|$five| $s");
 
-        # TODO maybe match a cmavo... but if we're doing that in both
-        # branches why not always do that first?
+            # TODO maybe match a cmavo... but if we're doing that in both
+            # branches why not always do that first?
 
-        # gismu are CVC/CV CCVCV
-    } else {
-        diag("CMAVO?\t|$five| $s");
+            # gismu are CVC/CV CCVCV
+        } else {
+            diag("CMAVO?\t|$five| $s");
 
-        # TODO parse a cmavo, advance string, try again
+            # TODO parse a cmavo, advance string, try again
+        }
     }
 }
 
@@ -223,13 +238,44 @@ my $gismu_re = '(?:'
     join( '', map { $Restring{$_} } qw(C V C/C V) ),
     join( '', map { $Restring{$_} } qw(CC V C V) ) )
   . ')';
-diag $gismu_re;
+#diag $gismu_re;
 
 # candidate #2 should be same as the previous?
 my $cvccv = join( '', map { $Restring{$_} } qw(C V C/C V) );
 my $ccvcv = join( '', map { $Restring{$_} } qw(CC V C V) );
 my $re    = Regexp::Assemble->new->add( $cvccv, $ccvcv )->anchor_line_begin;
-diag $re->as_string;
+#diag $re->as_string;
+my $gismu_re2 = $re->re;
+
+# all possible gisum, which is a superset of what can be in the language
+# (this assumes that the "allgismu" code correctly generates all
+# possible gismu)
+#   `cd gismu && make all`
+# not matching the regex here would be bad
+open my $fh, '<', 'gismu/all' or die "argh all: $!\n";
+while ( my $gismu = readline $fh ) {
+    chomp $gismu;
+    if ( $gismu !~ m{$gismu_re} ) {
+        die("FAIL1 $gismu");
+    }
+    if ( $gismu !~ m{$gismu_re2} ) {
+        die("FAIL2 $gismu");
+    }
+}
+
+# bad, must not be matched
+open $fh, '<', 'gismu/bad' or die "argh bad: $!\n";
+while ( my $gismu = readline $fh ) {
+    chomp $gismu;
+    if ( $gismu =~ m{$gismu_re} ) {
+        die("MATCH1? $gismu");
+    }
+    if ( $gismu =~ m{$gismu_re2} ) {
+        die("MATCH2? $gismu");
+    }
+}
+
+$Restring{GISMU} = $re->as_string;
 
 ########################################################################
 #
@@ -273,6 +319,8 @@ if ($Flag_Export) {
     );
 }
 
+print "--\n";
+
 ########################################################################
 #
 # SUBROUTINES
@@ -280,9 +328,6 @@ if ($Flag_Export) {
 # make the C/C pairs which differ from the CC pairs (a shorter static
 # list copied out of CLL, above)
 sub make_c_pairs {
-    my $cjsz   = qr/[cjsz]/;
-    my $cx_etc = qr/(?:cx|kx|xc|mz)/;
-
     my @pairs;
     # pairs of consonants have restrictions:
     for my $x ( @{ $Sets{C} } ) {

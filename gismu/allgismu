@@ -2,6 +2,10 @@
 
 use 5.24.0;
 use warnings;
+use DB_File;
+
+my %all;
+tie %all, 'DB_File', 'all.db';
 
 my %graph;
 my $current_node;
@@ -32,13 +36,17 @@ while (readline) {
 all_gismu();
 #say rand_gismu();
 
+warn "count=" . scalar( keys %all ) . "\n";
+
 sub all_gismu {
     my $node  = shift // 'start';
     my $gismu = shift // '';
 
     for my $c ( $graph{$node}->@* ) {
         if ( !exists $graph{ $c->[1] } ) {
-            say $gismu . $c->[0];
+            my $final = $gismu . $c->[0];
+            $all{"$final\0"} = 1;
+            say $final;
         } else {
             all_gismu( $c->[1], $gismu . $c->[0] );
         }

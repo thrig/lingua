@@ -1,12 +1,16 @@
 lojban gismu foo
 
- * allgismu - assuming make and perl are installed, generate all
-   potential gismu via
+ * allgismu - assuming make and perl are installed, generate "all"
+   potential (legal) gismu via
 
+     make depend
      make all
 
    otherwise study the graph in the 'graph' file, as parsed and executed
    by the code in 'allgismu'
+
+ * badgismu - generates every possible five letter word composed of
+   legal Lojban consonants or vowels. some of these are legal gismu
 
  * similar-gismu searches the ../lefanva generated dictionary file for
    similar gismu

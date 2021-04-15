@@ -1,3 +1,4 @@
+requires 'Algorithm::Permute';
 requires 'App::Prove';
 requires 'Cpanel::JSON::XS';
 requires 'DBD::SQLite', '>= 1.30_01';

@@ -1,4 +1,5 @@
 *.core
 *.dSYM
+out
 setevexe
 sitelen-sin

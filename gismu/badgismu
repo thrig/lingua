@@ -1,0 +1,31 @@
+#!/usr/bin/env perl
+#
+# badgismu - every possible five letter permutation of legal non-special
+# (minus .,') Lojbanic characters. some of these are legal gismu
+
+use 5.24.0;
+use warnings;
+use Algorithm::Permute;
+use DB_File;
+
+# all potential legal gisum, which we omit from the bad list
+my %all;
+tie %all, 'DB_File', 'all.db';
+
+my %bad;
+tie %bad, 'DB_File', 'bad.db';
+
+my $count = 0;
+my $p =
+  Algorithm::Permute->new( [qw(a b c d e f g i j k l m n o p r s t u v x y z)],
+    5 );
+while ( my @res = $p->next ) {
+    my $fivec = join '', @res;
+    $count++;
+    next if exists $all{"$fivec\0"};
+    $bad{$fivec} = 1;
+    say $fivec;
+}
+
+warn "count nongood=" . scalar( keys %bad ) . "\n";
+warn "count total=$count\n";
