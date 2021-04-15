@@ -5,7 +5,7 @@
 # discussion concerning {migleki} parsing into either {mi gleki}
 # (camxes, and probably some humans) or {migle ki} (a different parser
 # under consideration) or even failing to parse (my current version of
-# mitysisku, which is bad at cmavo). penultimate stress was mentioned,
+# mitysisku(1), which is bad at cmavo). penultimate stress was mentioned,
 # which {migléki} has but {coirodo} does not
 #
 #   "However, a detailed algorithm for breaking sounds into words has
@@ -15,12 +15,19 @@
 #     Complete Lojban Language" by John Woldemar Cowan, though that may
 #     vary from the specific PDF file
 
-use strict;
-use warnings;
 use Cpanel::JSON::XS ();
+use Getopt::Long qw(GetOptions);
 use Regexp::Assemble ();
-use Test::Differences 'eq_or_diff';
-use Test::More;
+use Test2::API qw(test2_add_callback_testing_done);
+use Test2::Bundle::More;
+use Test2::Tools::Compare;
+
+GetOptions( 'export' => \my $Flag_Export, 'test' => \my $Flag_Test ) or exit 1;
+
+plan(6);
+$Flag_Test = 1 if $Flag_Export;
+
+sub set($@);
 
 ########################################################################
 #
@@ -40,20 +47,6 @@ use Test::More;
 #   $Restring{"CAT"} = "[almtu]";
 
 my ( %Sets, %Regex, %Restring );
-
-sub set($@) {
-    my $name = shift;
-    $Sets{$name} = [@_];
-
-    # KLUGE escape . (and other things) so that "." to the regex does
-    # not become qr/./ which matches too much for our needs
-    my @list;
-    push @list, quotemeta($_) for @_;
-
-    my $re = Regexp::Assemble->new->add(@list);
-    $Regex{$name}    = $re->re;
-    $Restring{$name} = $re->as_string;
-}
 
 ########################################################################
 #
@@ -86,11 +79,15 @@ set VV => qw(
   u'a u'e u'i u'o u'u
 );
 
-# CLL 3.4
-set DIPHTHONG => qw(ai ei oi au ia ie ii io iu ua ue ui uo uu iy uy);
-
 # consonants minus ' which CLL 3.3 explains why is isn't h
 set C => qw(b c d f g j k l m n p r s t v x z);
+
+# do we have all the characters? + 3 is for the . ' , specials
+is( @{ $Sets{C} } + @{ $Sets{VALL} } + 3, @{ $Sets{ALL} }, "orthography count" )
+  if $Flag_Test;
+
+# CLL 3.4
+set DIPHTHONG => qw(ai ei oi au ia ie ii io iu ua ue ui uo uu iy uy);
 
 # CLL 3.6
 set C_VOICED   => qw(b d g v j z);
@@ -99,7 +96,13 @@ set C_SYLLABIC => qw(l m n r);
 
 # are the consonant subsets complete?
 is( @{ $Sets{C_VOICED} } + @{ $Sets{C_UNVOICED} } + @{ $Sets{C_SYLLABIC} },
-    scalar @{ $Sets{C} } );
+    @{ $Sets{C} },
+    "consonant subsets"
+) if $Flag_Test;
+
+# helper regex for the subsequent pair making
+set CJSZ   => qw(c j s z);
+set CX_ETC => qw(cx kx xc mz);
 
 # permissible consonant pairs, which differ from the subsequent
 set "C/C" => make_c_pairs();
@@ -129,7 +132,7 @@ set CC => qw(
   xl xr
 );
 # CLL 3.7 p.40 claims that there are 48 of these
-is( @{ $Sets{CC} }, 48 );
+is( @{ $Sets{CC} }, 48, "permissible initial consonant pairs" ) if $Flag_Test;
 
 # CLL 3.7 p.38 and CLL 4.1 p.50
 #
@@ -139,11 +142,11 @@ is( @{ $Sets{CC} }, 48 );
 #   2. last two must be permissible initial consonant pair (CC)
 #   3. qw(ndj ndz ntc nts) are verboten
 # (there are complications involving names or cmene, see below)
-#
-# brute force this--minus the bad triples iterate all C/C and use each
-# last character to find all CC that start with said
+
 set BAD_TRIPLE => qw(ndj ndz ntc nts);
 
+# brute force this--minus the bad triples iterate all C/C and use each
+# last character to find all CC that start with said
 {
     my @ccc;
     for my $chpair ( @{ $Sets{"C/C"} } ) {
@@ -175,7 +178,7 @@ set BAD_TRIPLE => qw(ndj ndz ntc nts);
     my ( %ccall, %cslash );
     @ccall{ @{ $Sets{CC} }, @{ $Sets{"C/C"} } } = ();
     @cslash{ @{ $Sets{"C/C"} } } = ();
-    eq_or_diff( \%ccall, \%cslash, "CC not subset of C/C" );
+    is( \%ccall, \%cslash, "CC is subset of C/C" ) if $Flag_Test;
 }
 
 # so a lexer might run something like (after [.,], \s+, and etc have
@@ -215,22 +218,27 @@ for my $s ( qw(migleki coigleki coirodo), "mi'agleki" ) {
 
 # TODO does a gismu matcher built from CVC/CV or CCVCV match all gismu
 # available in the dictionary? (or things that it should not?)
-my $gismu_re = '(?:' . join( '|',
+my $gismu_re = '(?:'
+  . join( '|',
     join( '', map { $Restring{$_} } qw(C V C/C V) ),
-    join( '', map { $Restring{$_} } qw(CC V C V) ) ) . ')';
+    join( '', map { $Restring{$_} } qw(CC V C V) ) )
+  . ')';
 diag $gismu_re;
 
 # candidate #2 should be same as the previous?
 my $cvccv = join( '', map { $Restring{$_} } qw(C V C/C V) );
 my $ccvcv = join( '', map { $Restring{$_} } qw(CC V C V) );
-my $re = Regexp::Assemble->new->add($cvccv, $ccvcv)->anchor_line_begin;
+my $re    = Regexp::Assemble->new->add( $cvccv, $ccvcv )->anchor_line_begin;
 diag $re->as_string;
 
 ########################################################################
 #
 # PARTING TESTS
 
-{
+if ($Flag_Test) {
+    my $failure_count = 0;
+    test2_add_callback_testing_done( sub { $failure_count = $_[1]->failed } );
+
     my ( @bad_re, @empty );
     for my $key ( keys %Sets ) {
         my $set = $Sets{$key};
@@ -241,23 +249,29 @@ diag $re->as_string;
         # any empty sets because you renamed something?
         push @empty, $key unless @$set;
     }
-    eq_or_diff( \@bad_re, [], "illegal set name" );
-    eq_or_diff( \@empty,  [], "empty set" );
-}
+    is( \@bad_re, [], "illegal set name" );
+    is( \@empty,  [], "empty set" );
 
-done_testing;
+    done_testing;
+    if ( $failure_count != 0 ) {
+        diag "no JSON export due to test failure(s)";
+        $Flag_Export = 0;
+    }
+}
 
 ########################################################################
 #
 # EXPORT
 
-my $json = Cpanel::JSON::XS->new->ascii->pretty->canonical(1);
-open my $fh, '>', "jbolex.json" or die "open failed 'jbolex.json': $!\n";
-print $fh $json->encode(
-    [   sets  => \%Sets,
-        regex => \%Restring,
-    ]
-);
+if ($Flag_Export) {
+    my $json = Cpanel::JSON::XS->new->ascii->pretty->canonical(1);
+    open my $fh, '>', "jbolex.json" or die "open failed 'jbolex.json': $!\n";
+    print $fh $json->encode(
+        [   sets  => \%Sets,
+            regex => \%Restring,
+        ]
+    );
+}
 
 ########################################################################
 #
@@ -285,17 +299,30 @@ sub make_c_pairs {
               and $y =~ m{$Regex{C_VOICED}};
 
             #   3. both cannot be from c, j, s, z
-            next if $x =~ m{^$cjsz} and $y =~ m{^$cjsz};
+            next if $x =~ m{^$Regex{CJSZ}} and $y =~ m{^$Regex{CJSZ}};
 
             my $p = "$x$y";
 
             #   4. cx, kx, xc, mz are forbidden
-            next if $p =~ m{^$cx_etc$};
+            next if $p =~ m{^$Regex{CX_ETC}};
 
             push @pairs, $p;
         }
     }
     return @pairs;
+}
+
+sub set($@) {
+    my $name = shift;
+    $Sets{$name} = [@_];
+
+    # KLUGE escape . (and other things) so that "." the Lojbanic stop
+    # does not become qr/./ which matches too much for our needs
+    my @list = map { quotemeta } @_;
+
+    my $re = Regexp::Assemble->new->add(@list);
+    $Regex{$name}    = $re->re;
+    $Restring{$name} = $re->as_string;
 }
 
 ########################################################################

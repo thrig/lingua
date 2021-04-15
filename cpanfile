@@ -7,6 +7,7 @@ requires 'Getopt::Long';
 requires 'Lingua::Awkwords';
 requires 'Math::Random::Discrete';
 requires 'SQL::Abstract';
+requires 'Test2::V0', '>= 0.000060';
 requires 'Test::Cmd';
 requires 'Test::Most';
 requires 'Test::UnixExit';
