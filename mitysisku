@@ -15,7 +15,9 @@ use Term::ReadKey qw(GetTerminalSize);
 
 my $DBFILE = "$ENV{HOME}/share/lojban/en.db";
 
-my $Flag_Method           = 'LIKE';
+# this used to be LIKE by default, but that then required an -e alias,
+# so eventually this got changed and the alias removed
+my $Flag_Method           = '=';
 my $Flag_SearchDefinition = 0;
 
 Getopt::Long::Configure("bundling");
@@ -54,8 +56,8 @@ if ( $lang eq 'en' ) {
     $render_by = \&render_jbo;
     # treat "h" in input same as "'" as h is easier for me to type and
     # is more or less the same sound as what ' represents and other
-    # lojban folks indicate they use this convention; use the hify flag
-    # to try to mend ' to h in the output
+    # lojban folks indicate they use this convention. use the hify flag
+    # to try to mend ' to h in the output (much less standard)
     $The_Word =~ tr/h/'/ unless $Flag_SearchDefinition;
     $Search_Field = 'definition' if $Flag_SearchDefinition;
 } else {
@@ -67,26 +69,49 @@ my $Words_Found = 0;
 
 my $dbh = DBI->connect( 'dbi:SQLite:dbname=' . $DBFILE,
     '', '', { AutoCommit => 1, RaiseError => 1 } );
+my $Countq = $dbh->prepare("SELECT count(*) FROM jbo WHERE word = ?");
 
 my $source = $dbh->quote_identifier($lang);
 
 output_setup();
 
-search( $The_Word, $Flag_Recurse ) unless $Flag_Gismu;
+# try an exact lookup
+search( $The_Word, $Flag_Recurse );
 
-if ( $Words_Found == 0 and $lang eq 'jbo' and !$Flag_SearchDefinition ) {
+# if nothing was found (or -g demands such) search for cmavo-compound
+# {iicai} or lujvo {brasince} or both {iibrasince} or both with extra
+# sprinkles on top {iiicaibrasince}. camxes is another option. mitysisku
+# tries to find dictionary words involved with the input; this is a
+# different goal than the more complicated art of correctly parsing
+# Lojban. in particular, both cmavo and rafsi-for-cmavo will be looked
+# up for inputs such as {iicaisince} as mitysisku does not know how to
+# tell a cmavo compound {iicai} apart from some (perhaps invalid) lujvo
+# involving {carmi}
+if (    $lang eq 'jbo'
+    and !$Flag_SearchDefinition
+    and ( $Words_Found == 0 || $Flag_Gismu ) ) {
     $Flag_Method  = '=';
     $Flag_Recurse = 0;
 
-    # maybe a rafsi?
-    if ( length $The_Word == 3 or $The_Word =~ m/^..'.$/ ) {
-        my $gismu = gismu_or_cmavo($The_Word);
-        search( $gismu, $Flag_Recurse ) if $gismu;
-    } elsif ( length $The_Word > 4 ) {
-        # lujvo must be at least six characters but need to support
-        # exactly five if the user gave us a gismu here
+    # pull cmavo or other matching entries off the beginning of the word
+    my $check_entire = 0;
+    while ( length $The_Word ) {
+        my $ret = longest_first_word( $The_Word, $check_entire );
+        $check_entire = 1;
+        if ( defined $ret ) {
+            search( $ret, $Flag_Recurse );
+            $The_Word = substr $The_Word, length $ret;
+        } else {
+            last;
+        }
+    }
+
+    # maybe it is a lujvo?
+    if ( length $The_Word ) {
         search( $_, $Flag_Recurse ) for decompose($The_Word);
     }
+
+    undef $Countq;
 }
 
 if ( $Words_Found == 1 and $lang eq 'en' ) {
@@ -109,21 +134,12 @@ sub bold { "\e[1m$_[0]\e[0m" }
 sub decompose {
     my ($word) = @_;
 
-    # NOTE this and subsequent CC are sloppy; there are restrictions on
-    # consonant pairs CVCCV and more restrictions on leading consonant
-    # pairs CCVCV
-    my $gismu_re = qr{
-      [bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou] |
-      [bcdfgjklmnprstvxz][bcdfgjklmnprstvxz][aeiou][bcdfgjklmnprstvxz][aeiou]
-    }x;
+    # from jbolex.json
+    my $gismu_re =
+      qr{(?:[bcdfgjklmnprstvxz][aeiou](?:l[bcdfgjkmnprstvxz]|n[bcdfgjklmprstvxz]|r[bcdfgjklmnpstvxz]|m[bcdfgjklnprstvx]|f[cklmnprstx]|p[cfklmnrstx]|t[cfklmnprsx]|b[dgjlmnrvz]|d[bgjlmnrvz]|g[bdjlmnrvz]|k[cflmnprst]|s[fklmnprtx]|v[bdgjlmnrz]|c[fklmnprt]|j[bdglmnrv]|x[flmnprst]|z[bdglmnrv])|(?:c[fklmnprt]|s[fklmnprt]|j[bdgmv]|z[bdgmv]|d[jrz]|t[crs]|b[lr]|f[lr]|g[lr]|k[lr]|m[lr]|p[lr]|v[lr]|x[lr])[aeiou][bcdfgjklmnprstvxz])[aeiou]};
 
     my @words;
 
-    # maybe one or more short-form rafsi (CVC, CCV, CVV (and CVV may
-    # appear as sa'i or sai)) or 4-letter rafsi (CCVC, CVCC e.g.
-    # gismu) and these may be stuck together with one of [nry]. CVC
-    # cannot appear in tail position (lujvo must end with a vowel)
-    # TODO may need to add more cmavo forms
     my $prev_match = 0;
   LOOP: {
         # tail CCV, CVV, or a full gismu. however! cmevla can end with a
@@ -223,21 +239,21 @@ sub decompose {
 }
 
 sub emit_help {
-    warn <<"END_USAGE";
+    print {*STDERR} <<"END_USAGE";
 Usage: mitysisku [options] word [en|jbo]
 
 Lojban word lookup tool. Options include:
 
-  -e    Use = for search (exact)
-  -l    Use LIKE for search (default; %word% unless [%_] present)
+  -e    Use the exact = for the search (default).
+  -l    LIKE search ("%word%" unless [%_] found in word)
 
-  -g    Gismuify: only attempts to lookup gismu via rafsi of the
-        input (this happens by default if nothing else in the
-        dictionary matches).
+  -g    "Global" search; attempts to break down cmavo-compound and lujvo
+        into cmavo, rafsi, and gismu searches. May be called if no
+        results were found with a single word search.
 
   -R    Recurse; also looks up any related words. Repeat flag to
         increase the recursion depth. Recursion is disabled when
-        performing a gismu search via rafsi (via -g or on no match).
+        performing a global search.
 
   -t    Search for words of the given type (e.g. cmavo, ...)
   -s    Search by selmaho.
@@ -245,7 +261,7 @@ Lojban word lookup tool. Options include:
   -x    Exclude experimental words.
 
 Piping to less(1) may require `less -R` due to the terminal escape
-codes used.
+codes used, or that -R is set in the LESS env variable.
 
 END_USAGE
     exit 64;
@@ -254,33 +270,41 @@ END_USAGE
 sub gismu_or_cmavo {
     my ($word) = @_;
     if ( length $word == 5 ) {
-        # gismu are five letters (and hopefully nothing else)
+        # gismu are five letters. mostly.
         return (
             $dbh->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
           ->[0];
     }
-    my $found;
+    my @found;
     if ( length $word == 4 and $word !~ m/'/ ) {
         # truncated gism aka 4-letter rafsi?
-        $found = (
-            $dbh->selectcol_arrayref(
+        push @found,
+          ( $dbh->selectcol_arrayref(
                 "SELECT word FROM jbo WHERE word LIKE ?",
                 {}, $word . '_'
             )
         )->[0];
     } else {
-        # assume a CCV, CVC or CVV form
-        $found = (
+        # could be a rafsi, or a random cmavo (perhaps incorrectly)
+        # glued onto a gismu: the lujvo algorithm does not form
+        # {naugleki} from {nanmu gleki} so that probably instead means
+        # {nau gleki} of the cmavo {nau}. another problem is {ve'imle};
+        # the cmavo {ve'i} does not have a rafsi so one must use {ve'i
+        # zei melbi} to lujvo it (CLL 4.6). however, knowing that
+        # {ve'imle} is invalid would require a more complicated tool, so
+        # instead mitysisku looks up everything relevant and leaves it
+        # to the reader to figure out what is what
+        push @found,
+          (
+            $dbh->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
+          ->[0];
+
+        push @found,
+          (
             $dbh->selectcol_arrayref( "SELECT word FROM rafsi WHERE rafsi = ?", {}, $word )
         )->[0];
     }
-    if ( !defined $found ) {
-        # perhaps it's a cmavo?
-        $found =
-          ( $dbh->selectcol_arrayref( "SELECT word FROM jbo WHERE word = ?", {}, $word ) )
-          ->[0];
-    }
-    return $found;
+    return @found;
 }
 
 sub hify {
@@ -289,12 +313,31 @@ sub hify {
     $word =~ tr/'/h/r;
 }
 
+# this gets the order wrong on {iii}, but eh
+sub longest_first_word {
+    my ($word) = @_;
+
+    my @found;
+    my $offset = 0;
+    my $len    = length $word;
+    while ( ++$offset <= $len ) {
+        my $search = substr $word, 0, $offset;
+        $Countq->execute($search);
+        my $count = ( $Countq->fetchrow_array )[0];
+        $Countq->finish;
+        last if $count == 0;
+        push @found, $search;
+    }
+    return @found ? $found[-1] : ();
+}
+
+# actually also cmavo, sometimes
 sub maybe_push_rafsi {
     my ( $aref, $rafsi ) = @_;
-    my $gismu = gismu_or_cmavo($rafsi);
+    my @ret = grep defined, gismu_or_cmavo($rafsi);
     die "mitysisku: unknown rafsi |$rafsi| in |$The_Word|\n"
-      unless defined $gismu;
-    push $aref->@*, $gismu;
+      unless @ret;
+    push $aref->@*, @ret;
 }
 
 sub render_en {
@@ -375,7 +418,7 @@ sub search {
     my ( $word, $depth ) = @_;
 
     state %seen;
-    $seen{$word}++;
+    return if $seen{$word}++;
 
     my $only = '';
     if ( defined $Flag_Type ) {

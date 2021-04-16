@@ -4,9 +4,14 @@
 # CCL[1] chapters 3, 4, and other sections. motivated by a #lojban
 # discussion concerning {migleki} parsing into either {mi gleki}
 # (camxes, and probably some humans) or {migle ki} (a different parser
-# under consideration) or even failing to parse (my current version of
-# mitysisku(1), which is bad at cmavo). penultimate stress was mentioned,
-# which {migléki} has but {coirodo} does not
+# under consideration) or even failing to parse (a then current version
+# of mitysisku(1), which is now less bad at cmavo). penultimate stress
+# was mentioned, which {migléki} has but {coirodo} does not
+#
+# the output file "jbolex.json" will likely be of interest as it
+# contains the character sets and associated regular expressions
+# from this code, plus additional regular expressions for more
+# complicated forms
 #
 #   "However, a detailed algorithm for breaking sounds into words has
 #   not yet been fully debugged" -- CLL 4.1 p.49
@@ -19,26 +24,31 @@
 #   https://github.com/lojban/jbofihe
 #   https://github.com/La-Lojban/free-gismu-space
 #
-# TODO check outputs of this code against those
+# TODO check outputs of this code against those (though the
+# free-gismu-space code I somehow adapted into gismu/allgismu some
+# time ago)
 
 use strict;
 use warnings;
 use Cpanel::JSON::XS ();
-use DBI;
+use DBI              ();
 use Getopt::Long qw(GetOptions);
 use Regexp::Assemble ();
 use Test2::API qw(test2_add_callback_testing_done);
 use Test2::Bundle::More;
 use Test2::Tools::Compare;
 
-# see lefanva for how to set this up
-my $dbh = DBI->connect( "dbi:SQLite:dbname=$ENV{HOME}/share/lojban/en.db",
-    '', '', { AutoCommit => 1, RaiseError => 1 } );
+# see lefanva for how to set this up (or comment out all the $dbh
+# related code)
+my $DBFILE = "$ENV{HOME}/share/lojban/en.db";
+die "no lojban database -- see lefanva\n" unless -f $DBFILE;
+my $dbh = DBI->connect( "dbi:SQLite:dbname=$DBFILE", '', '',
+    { AutoCommit => 1, RaiseError => 1 } );
 
 GetOptions( 'export' => \my $Flag_Export, 'test' => \my $Flag_Test ) or exit 1;
 
 $Flag_Test = 1 if $Flag_Export;
-plan(6)        if $Flag_Test;
+plan(10)       if $Flag_Test;
 
 sub set($@);
 
@@ -49,7 +59,7 @@ sub set($@);
 #  * %Sets -- name to list reference of various characters or strings.
 #    the names are either taken from CLL (V, C/CC, etc) or have been
 #    made up. the names MUST NOT match any characters in the ALL set
-#  * %Regex -- compiled regex of the Sets
+#  * %Regex -- compiled regex of the Sets, plus some others
 #  * %Restring -- as previous but in as_string form for cleaner (ha!)
 #    export to JSON or subsequent use in PCRE or whatever
 #
@@ -67,6 +77,7 @@ my ( %Sets, %Regex, %Restring );
 
 # CLL 3.1
 set ALL => "'", ",", ".", qw(a b c d e f g i j k l m n o p r s t u v x y z);
+set ALLREGULAR => qw(a b c d e f g i j k l m n o p r s t u v x y z);
 
 # CLL 4.1 - vowels (excludes .y. by definition)
 set V    => qw(a e i o u);
@@ -82,7 +93,7 @@ set V_PAIR => qw(
   y'a y'e y'i y'o y'u y'y
 );
 
-# CLL 4.1 - vowel pairs
+# CLL 4.1 - vowel pairs (extended by CMAVO)
 set VV => qw(
   ai ei oi au
   a'a a'e a'i a'o a'u
@@ -96,8 +107,14 @@ set VV => qw(
 set C => qw(b c d f g j k l m n p r s t v x z);
 
 # do we have all the characters? + 3 is for the . ' , specials
-is( @{ $Sets{C} } + @{ $Sets{VALL} } + 3, @{ $Sets{ALL} }, "orthography count" )
-  if $Flag_Test;
+is( @{ $Sets{C} } + @{ $Sets{VALL} } + 3,
+    @{ $Sets{ALL} },
+    "orthography count 1"
+) if $Flag_Test;
+is( @{ $Sets{C} } + @{ $Sets{VALL} },
+    @{ $Sets{ALLREGULAR} },
+    "orthography count 2"
+) if $Flag_Test;
 
 # CLL 3.4
 set DIPHTHONG => qw(ai ei oi au ia ie ii io iu ua ue ui uo uu iy uy);
@@ -113,7 +130,7 @@ is( @{ $Sets{C_VOICED} } + @{ $Sets{C_UNVOICED} } + @{ $Sets{C_SYLLABIC} },
     "consonant subsets"
 ) if $Flag_Test;
 
-# helper regex for the subsequent pair making
+# make helper regex for the subsequent pair making
 set CJSZ   => qw(c j s z);
 set CX_ETC => qw(cx kx xc xk mz);
 
@@ -177,16 +194,171 @@ set BAD_TRIPLE => qw(ndj ndz ntc nts);
 
 ########################################################################
 #
-# ON WORDS (but not names)
+# CMAVO - CLL 4.2
 
-# brivla -- CLL 4.3 p.52
-#   1. always end in a vowel (unlike cmene)
-#   2. always contain a consonant pair in the first five letters (y and
-#      ' are not counted as letters for this purpose)
-#   3. always are stressed on penultimate syllable (thus they have two
-#      or more syllables)
+{
+    # CLL 4.2 p.51
+    set CMAVO_VV =>
+      ( @{ $Sets{VV} }, @{ $Sets{DIPHTHONG} }, qw(ia ie ii io iu ua ue ui uo uu) );
+
+    # CLL 4.2 p.51 and also CLL 17.2 p.398
+    set CMAVO_CY => map { $_ . 'y' } @{ $Sets{C} };
+
+    # these go under the "bu-letteral" type in the dictionary. they may
+    # need to be renamed to something better
+    set LETTERAL_VALL => map { $_ . 'bu' } @{ $Sets{VALL} };
+
+    # unique, though related to Cy
+    set LETTERAL_Y => "y'y";
+
+    # KLUGE custom things in my copy of the dictionary. downside: a lot
+    # of these could be added, especially if someone wants to letteral
+    # up any portion of the Unicode space. another debate is whether to
+    # match these as two tokens [something,bu] or to include the bu in
+    # the match. since my use is aimed at a dictionary lookup, going for
+    # the inclusive match to obtain a more exact dictionary entry
+    # (compare {ve'o} and {ve'obu})
+    #
+    # TODO this probably needs to be made more generic, maybe with a
+    # closer reading of CLL 17.5 and onwards?
+    set LETTERAL_MISC =>
+      qw(joibu ky.bu paubu saibu uibu ve'obu veibu vy.bu xy.bu y'y.bu zo'obu);
+
+    my @cv;
+    for my $c ( @{ $Sets{C} } ) {
+        for my $v ( @{ $Sets{V} } ) {
+            push @cv, "$c$v";
+        }
+    }
+    set CMAVO_CV => @cv;
+
+    my @cvv;
+    for my $c ( @{ $Sets{C} } ) {
+        for my $vv ( @{ $Sets{CMAVO_VV} } ) {
+            push @cvv, "$c$vv";
+        }
+    }
+    # TODO is this generic and re-used in lujvo? if so rename it CVV
+    set CMAVO_CVV => @cvv;
+
+    # NOTE KLUGE had problems with Regexp::Assemble 0.38 if add
+    # CMAVO_CVV to this list so instead join that on afterwards
+    my $cobj = Regexp::Assemble->new->add( map { $Restring{$_} }
+          qw(VALL CMAVO_VV CMAVO_CV CMAVO_CY LETTERAL_Y LETTERAL_VALL LETTERAL_MISC) );
+    my $re = $cobj->as_string;
+
+    # TODO also need to consider experimental cmavo forms, CVVV+ VVV+
+    $re = '(?:' . join( '|', $re, $Restring{CMAVO_CVV} ) . ')';
+
+    if (1) {
+        my ( $fh, @match );
+        open $fh, '>', 'out' or die "argh $!";
+        # NOTE there are a bunch of cmavo types (and also bu-letterals);
+        # cmavo-compound are not considered as a single unit for lexing.
+        # experimental cmavo are also useful to match as they use a
+        # longer form
+        #
+        #   sqlite> select distinct type from jbo where type like '%cmavo%';
+        #   cmavo
+        #   cmavo-compound
+        #   experimental cmavo
+        #   obsolete cmavo
+        #   sqlite>
+        my $sth = $dbh->prepare(
+            "SELECT word,type FROM jbo WHERE type = ? OR type = ? OR type = ?");
+        $sth->execute( "cmavo", "experimental cmavo", "bu-letteral" );
+        while ( my @row = $sth->fetchrow_array ) {
+            my ( $cmavo, $type ) = @row;
+            # skip {canlu bu} and such letterals
+            next if $cmavo =~ m/ bu$/;
+            if ( $cmavo !~ m{^$re$} ) {
+                print $fh "$cmavo $type\n";
+            }
+        }
+        #is( \@match, [], "non matching dictionary cmavo" );
+    }
+
+    # this omits experimental cmavo, notably, so is not called CMAVO
+    $Restring{CMAVO_SUBSET} = $re;
+}
+
+########################################################################
 #
-# could be a CC or a C/C consonant pair... is CC a subset of C/C?
+# GISMU - CLL 4.4
+
+{
+    # does a gismu matcher built from CVC/CV or CCVCV match all gismu?
+    my $cvccv = join( '', map { $Restring{$_} } qw(C V C/C V) );
+    my $ccvcv = join( '', map { $Restring{$_} } qw(CC V C V) );
+    my $gobj  = Regexp::Assemble->new->add( $cvccv, $ccvcv );
+    my $re    = $gobj->re;
+
+    if ($Flag_Test) {
+        # all possible gismu, which is a superset of what can be in the
+        # language (this assumes that the "allgismu" code correctly
+        # generates all possible gismu, and that the permutation code
+        # for the bads is also correct)
+        if ( !-f "gismu/all" or !-f "gismu/bad" ) {
+            diag("building gismu lists... (slow)");
+            system(qw{make -C gismu all});
+        }
+
+        my $fh;
+        my @match;
+
+        diag("matching gismu lists... (slow)");
+
+        # any potential gismu must match
+        open $fh, '<', 'gismu/all' or die "open failed 'gismu/all': $!\n";
+        while ( my $gismu = readline $fh ) {
+            chomp $gismu;
+            if ( $gismu !~ m{^$re$} ) {
+                push @match, $gismu;
+            }
+        }
+        is( \@match, [], "not matching allgismu" );
+
+        # bad must not be matched
+        @match = ();
+        open $fh, '<', 'gismu/bad' or die "open failed 'gismu/bad': $!\n";
+        while ( my $gismu = readline $fh ) {
+            chomp $gismu;
+            if ( $gismu =~ m{^$re$} ) {
+                push @match, $gismu;
+            }
+        }
+        is( \@match, [], "matching badgismu" );
+
+        # there's not many of these unlike the order of magnitude
+        # larger potential gismu space and even larger illegal space.
+        # but not being able to match a dictionary entry would be,
+        # like, really bad
+        #
+        #   sqlite> select count(*) from jbo where type like '%gismu%';
+        #   1655
+        #   sqlite> select distinct type from jbo where type like '%gismu%';
+        #   experimental gismu
+        #   gismu
+        #   sqlite>
+        @match = ();
+        my $sth = $dbh->prepare("SELECT word FROM jbo WHERE type LIKE ?");
+        $sth->execute('%gismu%');
+        while ( my $gismu = ( $sth->fetchrow_array )[0] ) {
+            if ( $gismu !~ m{^$re$} ) {
+                push @match, $gismu;
+            }
+        }
+        is( \@match, [], "non matching dictionary gismu??" );
+    }
+
+    # a Sets entry for gismu would require listing out all the potential
+    # gismu, or at least the approved dictionary ones, which is a lot,
+    # and that list can more readily be queried from a database. so only
+    # a regex entry for matching gismu
+    $Restring{GISMU} = $gobj->as_string;
+}
+
+# is CC a subset of C/C?
 {
     my ( %ccall, %cslash );
     @ccall{ @{ $Sets{CC} }, @{ $Sets{"C/C"} } } = ();
@@ -194,88 +366,7 @@ set BAD_TRIPLE => qw(ndj ndz ntc nts);
     is( \%ccall, \%cslash, "CC is subset of C/C" ) if $Flag_Test;
 }
 
-# so a lexer might run something like (after [.,], \s+, and etc have
-# been dealt with)
-if (0) {
-    for my $s ( qw(migleki coigleki coirodo), "mi'agleki" ) {
-        my $copy = $s;
-        $copy =~ tr/'y//d;
-        my $five = substr( $copy, 0, 5 );
-        if ( $five =~ m{$Regex{"C/C"}} ) {
-            # but there still could be a cmavo of most forms (everything
-            # except the longer experimental suff?) at the head
-            diag("BRIVLA?\t|$five| $s");
-
-            # TODO maybe match a cmavo... but if we're doing that in both
-            # branches why not always do that first?
-
-            # gismu are CVC/CV CCVCV
-        } else {
-            diag("CMAVO?\t|$five| $s");
-
-            # TODO parse a cmavo, advance string, try again
-        }
-    }
-}
-
-# cmavo - V, .y., CV, VV, CVV + experimentals which are three or more
-# vowels in a row, or a single consonant followed by three or more
-#
-# ".y. must have pauses before and after it"
-#
-# also Cy (CLL 17 p.397)
-#
-# cmavo of VV-form also include
-#   ia ie ii io iu
-#   ua ue ui uo uu
-#
-# as in {.ii since}
-
-# TODO does a gismu matcher built from CVC/CV or CCVCV match all gismu
-# available in the dictionary? (or things that it should not?)
-my $gismu_re = '(?:'
-  . join( '|',
-    join( '', map { $Restring{$_} } qw(C V C/C V) ),
-    join( '', map { $Restring{$_} } qw(CC V C V) ) )
-  . ')';
-#diag $gismu_re;
-
-# candidate #2 should be same as the previous?
-my $cvccv = join( '', map { $Restring{$_} } qw(C V C/C V) );
-my $ccvcv = join( '', map { $Restring{$_} } qw(CC V C V) );
-my $re    = Regexp::Assemble->new->add( $cvccv, $ccvcv )->anchor_line_begin;
-#diag $re->as_string;
-my $gismu_re2 = $re->re;
-
-# all possible gisum, which is a superset of what can be in the language
-# (this assumes that the "allgismu" code correctly generates all
-# possible gismu)
-#   `cd gismu && make all`
-# not matching the regex here would be bad
-open my $fh, '<', 'gismu/all' or die "argh all: $!\n";
-while ( my $gismu = readline $fh ) {
-    chomp $gismu;
-    if ( $gismu !~ m{$gismu_re} ) {
-        die("FAIL1 $gismu");
-    }
-    if ( $gismu !~ m{$gismu_re2} ) {
-        die("FAIL2 $gismu");
-    }
-}
-
-# bad, must not be matched
-open $fh, '<', 'gismu/bad' or die "argh bad: $!\n";
-while ( my $gismu = readline $fh ) {
-    chomp $gismu;
-    if ( $gismu =~ m{$gismu_re} ) {
-        die("MATCH1? $gismu");
-    }
-    if ( $gismu =~ m{$gismu_re2} ) {
-        die("MATCH2? $gismu");
-    }
-}
-
-$Restring{GISMU} = $re->as_string;
+# TODO one might work on a lexer here
 
 ########################################################################
 #
@@ -319,8 +410,6 @@ if ($Flag_Export) {
     );
 }
 
-print "--\n";
-
 ########################################################################
 #
 # SUBROUTINES
@@ -348,7 +437,7 @@ sub make_c_pairs {
 
             my $p = "$x$y";
 
-            #   4. cx, kx, xc, mz are forbidden
+            #   4. cx, kx, xc, xk, mz are forbidden
             next if $p =~ m{^$Regex{CX_ETC}};
 
             push @pairs, $p;
