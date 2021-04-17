@@ -1,4 +1,4 @@
-.Dd March 15 2021
+.Dd April 17 2021
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -8,17 +8,16 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl DegHlRx
+.Op Fl DegHlnRx
 .Op Fl s Ar selma'o
 .Op Fl t Ar type
 .Ar word
-.Op Ar en|jbo
 .Ek
 .Sh DESCRIPTION
 .Nm
-performs lojban dictionary searches. By default lojban words are
-searched for; append
-.Ar en
+performs lojban dictionary searches. By default lojban is searched
+for; use
+.Fl n
 to instead search for
 .Ar word
 in the English-to-Lojban dictionary.
@@ -33,16 +32,16 @@ as exact searches on definitions are not very productive.
 .It Fl e
 Exact
 .Ar word
-search. Not enabled by default, unless the
-.Fl g
-flag is used.
+search. The default. This may be changed to a
+.Fl l
+search by other flags or inputs.
 .It Fl g
-Attempts a gismu lookup of all the gismu or rafsi that may be
+Attempts a global lookup of all the cmavo and rafsi that may be
 present in the
 .Ar word .
 This disables recursion and performs an exact word search. This flag is
-ignored when searching the English dictionary via
-.Ar en .
+ignored when searching the English dictionary. Will be called
+automatically if simpler searches fail.
 .It Fl H
 Replaces \&' with \&h in lojban words printed by this program
 (except not in the free-form NOTES or word definition fields). Input
@@ -54,18 +53,19 @@ This is a not official extension to the language.
 Use a
 .Cm LIKE
 .Ar word
-search. This is the default, and is done as
+search. This is done as
 .Cm %word%
 unless the
 .Ar word
 contains the
 .Cm [_
-characters, in which case that exact string will be used.
+characters, in which case that string will be used.
+.It Fl n
+Search the English dictionary instead of the Lojbanic one.
 .It Fl R
 Recurse; additionally looks up related words to the given
 .Ar word .
-Repeat this flag to increase the recursion depth. A gismu search
-.Fl g
+Repeat this flag to increase the recursion depth. A global search
 disables recursion. An
 .Ar en
 dictionary lookup likewise disables recursion.
@@ -91,18 +91,18 @@ Excludes experimental words from the result.
 .Sh EXIT STATUS
 .Ex -std
 .Sh EXAMPLES
-Exact lookup on
-.Sy la'o
-as otherwise the default
-.Cm LIKE
-search finds too many false positives
+Search the English dictionary,
+.Dl $ Ic mitysisku -n cat
+.Dl ...
 .Pp
-.Dl $ Ic mitysisku -e \&"la'o\&"
+Or the Lojbanic dictionary
+.Pp
+.Dl $ Ic mitysisku \&"la'o\&"
 .Dl ...
 .Pp
 or to avoid the need to shell quote the input
 .Pp
-.Dl $ Ic mitysisku -e laho
+.Dl $ Ic mitysisku laho
 .Dl ...
 .Pp
 or to depart from official form in the output
@@ -110,7 +110,7 @@ or to depart from official form in the output
 .Dl $ Ic mitysisku -H -e laho
 .Dl ...
 .Pp
-The difference between a gismu and not-gismu search may be illustrated
+The difference between a global and not-global search may be illustrated
 by...look, squirrel!
 .Pp
 .Dl $ Ic mitysisku ricyratcu
@@ -141,13 +141,15 @@ exactly would be annoying.
 tries to parse cmavo compounds and lujvo but is by no means perfect at
 this; it may be necessary to use
 .Xr camxes 1
-to parse phrases where the words have been mushed together randomly.
+to parse phrases where the words have been mushed together randomly. In
+particular bu-letterals probably are not parsed correctly.
+.Xr lujvo 1
+can be used to confirm whether a particular form is valid:
 .Pp
-.Dl $ Ic mitysisku -e domo
-.Dl $ Ic mitysisku -l domo \&| head -1
-.Dl Sy medomoi Li (cmavo-compound)
-.Dl $ Ic camxes domo
-.Dl (do mo)
+.Dl $ Ic camxes ive\&\\&'imlemlatu
+.Dl (i [ve'i mlemlatu])
+.Dl $ Ic lujvo ve\&\\&'i melbi
+.Dl $ 
 .Sh SEE ALSO
 .Xr camxes 1 ,
 .Xr lujvo 1
@@ -158,8 +160,13 @@ converts the XML dictionary to a format
 can consume; this utility also contains the database schema:
 .Pp
 https://github.com/thrig/lingua
+.Pp
+Download the dictionary from
+.Pp
+https://jbovlaste.lojban.org/
 .Sh AUTHOR
 .An Jeremy Mates
 .Sh BUGS
 Only the English dictionary is supported though other languages should
-not in theory be too difficult to add support for.
+in theory be simple to add support for. The parsing of lojban is not
+very good. Etc.

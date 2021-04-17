@@ -13,33 +13,40 @@ use DBI;
 use Getopt::Long qw(GetOptions);
 use Term::ReadKey qw(GetTerminalSize);
 
+# this could perhaps rely on some ENV variable to pick a different
+# jbo-to-N database file
 my $DBFILE = "$ENV{HOME}/share/lojban/en.db";
 
 # this used to be LIKE by default, but that then required an -e alias,
 # so eventually this got changed and the alias removed
 my $Flag_Method           = '=';
-my $Flag_SearchDefinition = 0;
+my $Flag_Searchdefinition = 0;
+
+my $lang = 'jbo';
 
 Getopt::Long::Configure("bundling");
 GetOptions(
-    'definition|D' => sub { $Flag_Method = 'LIKE'; $Flag_SearchDefinition = 1 },
+    'definition|D' => sub { $Flag_Method = 'LIKE'; $Flag_Searchdefinition = 1 },
     'equal|eq|e'   => sub { $Flag_Method = '=' },
     'gismuify|g'   => \my $Flag_Gismu,
     'help|h|?'     => \&emit_help,
     'hify|H'       => \my $Flag_Hify,
     'like|l'       => sub { $Flag_Method = 'LIKE' },
+    'natural|n'    => sub { $lang = 'en' },
     'recurse|R+'   => \my $Flag_Recurse,
     'selmaho|s=s'  => \my $Flag_Selmaho,
     'type|t=s'     => \my $Flag_Type,
-    'x'            => \my $Flag_NoExperimental,
+    'x'            => \my $Flag_Noexperimental,
 ) or exit 64;
 
 emit_help() if $Flag_Selmaho and $Flag_Type;
 
 $Flag_Recurse //= 0;
 
-my $The_Word = shift // ( $Flag_Selmaho ? '%' : emit_help() );
-my $lang     = shift // 'jbo';
+emit_help() if !$Flag_Selmaho and !@ARGV;
+
+my $The_Word = shift;
+$The_Word //= '%' if $Flag_Selmaho;
 
 my $Search_Field = 'word';
 $Flag_Method = 'LIKE' if $The_Word =~ m/%/;
@@ -58,8 +65,8 @@ if ( $lang eq 'en' ) {
     # is more or less the same sound as what ' represents and other
     # lojban folks indicate they use this convention. use the hify flag
     # to try to mend ' to h in the output (much less standard)
-    $The_Word =~ tr/h/'/ unless $Flag_SearchDefinition;
-    $Search_Field = 'definition' if $Flag_SearchDefinition;
+    $The_Word =~ tr/h/'/ unless $Flag_Searchdefinition;
+    $Search_Field = 'definition' if $Flag_Searchdefinition;
 } else {
     die "mitysisku: unknown language |$lang| (use en|jbo)\n";
 }
@@ -88,7 +95,7 @@ search( $The_Word, $Flag_Recurse );
 # tell a cmavo compound {iicai} apart from some (perhaps invalid) lujvo
 # involving {carmi}
 if (    $lang eq 'jbo'
-    and !$Flag_SearchDefinition
+    and !$Flag_Searchdefinition
     and ( $Words_Found == 0 || $Flag_Gismu ) ) {
     $Flag_Method  = '=';
     $Flag_Recurse = 0;
@@ -114,6 +121,7 @@ if (    $lang eq 'jbo'
     undef $Countq;
 }
 
+# automatic Lojban definition lookup for an exact English input match
 if ( $Words_Found == 1 and $lang eq 'en' ) {
     lineout();
     $lang        = 'jbo';
@@ -240,12 +248,15 @@ sub decompose {
 
 sub emit_help {
     print {*STDERR} <<"END_USAGE";
-Usage: mitysisku [options] word [en|jbo]
+Usage: mitysisku [options] word
 
 Lojban word lookup tool. Options include:
 
   -e    Use the exact = for the search (default).
   -l    LIKE search ("%word%" unless [%_] found in word)
+
+  -n    Search natural language (English to Lojban) instead of the
+        default Lojban to English.
 
   -g    "Global" search; attempts to break down cmavo-compound and lujvo
         into cmavo, rafsi, and gismu searches. May be called if no
@@ -313,7 +324,8 @@ sub hify {
     $word =~ tr/'/h/r;
 }
 
-# this gets the order wrong on {iii}, but eh
+# this is used to pull cmavo-like things off the front of such inputs as
+# {ijebo} and such. it gets the order wrong on {iii}, but eh
 sub longest_first_word {
     my ($word) = @_;
 
@@ -322,6 +334,9 @@ sub longest_first_word {
     my $len    = length $word;
     while ( ++$offset <= $len ) {
         my $search = substr $word, 0, $offset;
+        # skip over a leading consonant (but not CC nor C/C which would
+        # indicate a brivla that hopefully decompose() can decompose)
+        next if $search =~ m/^[bcdfgjklmnprstvxz]$/;
         $Countq->execute($search);
         my $count = ( $Countq->fetchrow_array )[0];
         $Countq->finish;
@@ -444,7 +459,7 @@ sub search {
     my @more;
     while ( my $row = $sth->fetchrow_hashref ) {
         next
-          if $Flag_NoExperimental
+          if $Flag_Noexperimental
           and exists $row->{type}
           and $row->{type} =~ m/experimental/;
         $Words_Found++;

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #
-# translator for http://jbovlaste.lojban.org XML output into sqlite for
-# use by mitysisku
+# translator for https://jbovlaste.lojban.org XML output into sqlite for
+# use by mitysisku(1)
 #
 #   ./lefanva .../english2lojban.xml ~/share/lojban/en.db
 #
