@@ -11,7 +11,7 @@ use strictures 2;
 use Data::Dumper;
 use DBI;
 use Getopt::Long qw(GetOptions);
-use Term::ReadKey qw(GetTerminalSize);
+use Term::Size;
 
 # this could perhaps rely on some ENV variable to pick a different
 # jbo-to-N database file
@@ -240,7 +240,7 @@ sub decompose {
     }
 
     sub output_setup {
-        ( $cols, $rows ) = GetTerminalSize(*STDOUT);
+        ( $cols, $rows ) = Term::Size::chars(*STDOUT);
         $output   = '';
         $newlines = 1;
     }
