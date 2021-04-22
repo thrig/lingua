@@ -1,4 +1,4 @@
-.Dd April 17 2021
+.Dd April 21 2021
 .Dt MITYSISKU 1
 .nh
 .Os
@@ -143,16 +143,16 @@ this; it may be necessary to use
 .Xr camxes 1
 to parse phrases where the words have been mushed together randomly. In
 particular bu-letterals probably are not parsed correctly.
-.Xr lujvo 1
+.Xr jvocuhadju 1
 can be used to confirm whether a particular form is valid:
 .Pp
 .Dl $ Ic camxes ive\&\\&'imlemlatu
 .Dl (i [ve'i mlemlatu])
-.Dl $ Ic lujvo ve\&\\&'i melbi
-.Dl $ 
+.Dl $ Ic jvocuhadju ve\&\\&'i melbi
+.Dl Cannot use component [ve'i] in forming lujvo.
 .Sh SEE ALSO
 .Xr camxes 1 ,
-.Xr lujvo 1
+.Xr jvocuhadju 1
 .Pp
 .Cm lefanva
 converts the XML dictionary to a format
@@ -164,6 +164,13 @@ https://github.com/thrig/lingua
 Download the dictionary from
 .Pp
 https://jbovlaste.lojban.org/
+.Pp
+Meanwhile,
+.Pp
+https://github.com/lojban/jbofihe
+.Pp
+is the source for
+.Xr jvocuhadju 1 .
 .Sh AUTHOR
 .An Jeremy Mates
 .Sh BUGS

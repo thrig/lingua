@@ -32,7 +32,7 @@ GetOptions(
     'help|h|?'     => \&emit_help,
     'hify|H'       => \my $Flag_Hify,
     'like|l'       => sub { $Flag_Method = 'LIKE' },
-    'natural|n'    => sub { $lang = 'en' },
+    'natural|n'    => sub { $lang        = 'en' },
     'recurse|R+'   => \my $Flag_Recurse,
     'selmaho|s=s'  => \my $Flag_Selmaho,
     'type|t=s'     => \my $Flag_Type,
@@ -240,7 +240,11 @@ sub decompose {
     }
 
     sub output_setup {
-        ( $cols, $rows ) = Term::Size::chars(*STDOUT);
+        if ( -t *STDOUT ) {
+            ( $cols, $rows ) = Term::Size::chars(*STDOUT);
+        } else {
+            ( $cols, $rows ) = ( 80, 24 );
+        }
         $output   = '';
         $newlines = 1;
     }
@@ -433,7 +437,6 @@ sub search {
     my ( $word, $depth ) = @_;
 
     state %seen;
-    return if $seen{$word}++;
 
     my $only = '';
     if ( defined $Flag_Type ) {
