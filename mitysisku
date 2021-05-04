@@ -76,7 +76,6 @@ my $Words_Found = 0;
 
 my $dbh = DBI->connect( 'dbi:SQLite:dbname=' . $DBFILE,
     '', '', { AutoCommit => 1, RaiseError => 1 } );
-my $Countq = $dbh->prepare("SELECT count(*) FROM jbo WHERE word = ?");
 
 my $source = $dbh->quote_identifier($lang);
 
@@ -117,8 +116,6 @@ if (    $lang eq 'jbo'
     if ( length $The_Word ) {
         search( $_, $Flag_Recurse ) for decompose($The_Word);
     }
-
-    undef $Countq;
 }
 
 # automatic Lojban definition lookup for an exact English input match
@@ -333,6 +330,8 @@ sub hify {
 sub longest_first_word {
     my ($word) = @_;
 
+    my $countq = $dbh->prepare(q{SELECT COUNT(*) FROM jbo WHERE word = ?});
+
     my @found;
     my $offset = 0;
     my $len    = length $word;
@@ -341,9 +340,8 @@ sub longest_first_word {
         # skip over a leading consonant (but not CC nor C/C which would
         # indicate a brivla that hopefully decompose() can decompose)
         next if $search =~ m/^[bcdfgjklmnprstvxz]$/;
-        $Countq->execute($search);
-        my $count = ( $Countq->fetchrow_array )[0];
-        $Countq->finish;
+        $countq->execute($search);
+        my $count = ( $countq->fetchrow_array )[0];
         last if $count == 0;
         push @found, $search;
     }
