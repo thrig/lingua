@@ -1,0 +1,47 @@
+
+    "I've seen things you people wouldn't believe. Attack ships on fire
+    off the shoulder of Orion. I watched C-beams glitter in the dark
+    near the Tannhäuser Gate. All those moments will be lost in time,
+    like tears in rain. Time to die."
+
+.i rau da zo'u tu'e mi pu viska da poi do to'e krici .i lo gunta
+kesyblo pu se jelspo ne'a lo janco be fi la'e la'oi .Orion .i mi pu
+viska lo nu lo gusli'i cu mircai ne'i lo manku re'o la'e la'oi
+.Tannhäuser. po'u lo djine .i da ba se claxu tai da'i lo se klaku ne'i
+lo carvi .i ca zi mrobi'o
+
+
+# {tu'e} is to scope the {rau da}s so they can be tears-in-rain'd
+"I've seen things you people wouldn't believe"
+.i rau da zo'u tu'e mi pu viska da poi do to'e krici
+"enough" somethings: ( I past see somethings that you not believe
+
+# things being "on fire" in space might be tricky, and throwing rocks is
+# likely more practical (per F = mv^2) if less poetical than that which
+# glitters. anyways...
+"Attack ships on fire off the shoulder of Orion"
+.i lo gunta kesyblo pu se jelspo ne'a lo janco be fi la'e la'oi .Orion
+attack spaceboat past burn next to the shoulder-of-Orion
+
+# "gate" became "ring" as magical gates are often rings in sci-fi (see
+# "The Expanse", "Cowboy Bebop", etc)
+#
+# TODO might instead {la'oi C-beams} which would be shorter? and maybe
+# quote in all of "Tannhäuser Gate"
+"I watched C-beams glitter in the dark near the Tannhäuser Gate"
+.i mi pu viska lo nu lo gusli'i cu mircai ne'i lo manku re'o la'e la'oi .Tannhäuser. po'u lo djine
+I past see the event of line-of-light glitter within the dark adjacent to Tannhäuser which is the ring
+
+# TODO something better for "lost in time" than {claxu}? but did not see
+# anything that jumped out at me while poking through the dictionary
+"All those moments will be lost in time, like tears in rain"
+.i da ba se claxu tai da'i lo se klaku ne'i lo carvi
+somethings future lacks like the tears within the rain
+
+# TODO could instead be {.i nau mrobi'o} ?
+"Time to die"
+.i ca zi mrobi'o
+now soon die
+
+# (the closing {tu'u} is not present, making the {tu'e} unclosed. this
+# may bother lisp people more than others
