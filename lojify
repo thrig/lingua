@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# lojify - vi(1) filter to confirm that camxes can parse the input
+
+cd TODOFIXME/ilmentufa || exit 1
+in=`cat`
+printf "%s\n" "$in"
+exec node run_camxes -m T "$in"

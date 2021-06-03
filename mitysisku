@@ -61,12 +61,15 @@ if ( $lang eq 'en' ) {
     undef $Flag_Type;
 } elsif ( $lang eq 'jbo' ) {
     $render_by = \&render_jbo;
-    # treat "h" in input same as "'" as h is easier for me to type and
-    # is more or less the same sound as what ' represents and other
-    # lojban folks indicate they use this convention. use the hify flag
-    # to try to mend ' to h in the output (much less standard)
-    $The_Word =~ tr/h/'/ unless $Flag_Searchdefinition;
-    $Search_Field = 'definition' if $Flag_Searchdefinition;
+    if ($Flag_Searchdefinition) {
+        $Search_Field = 'definition';
+    } else {
+        # various other lojbanic tools use this convention
+        $The_Word =~ tr/h/'/;
+        # ignore any unknown gunk (could also error on it) -- [%_] are
+        # for sqlite, CLL 3.1 for the other characters
+        $The_Word =~ tr/%_',.abcdefgijklmnoprstuvxyz//cd;
+    }
 } else {
     die "mitysisku: unknown language |$lang| (use en|jbo)\n";
 }
@@ -100,17 +103,18 @@ if (    $lang eq 'jbo'
     $Flag_Recurse = 0;
 
     # pull cmavo or other matching entries off the beginning of the word
-    my $check_entire = 0;
-    while ( length $The_Word ) {
-        my $ret = longest_first_word( $The_Word, $check_entire );
-        $check_entire = 1;
-        if ( defined $ret ) {
-            search( $ret, $Flag_Recurse );
-            $The_Word = substr $The_Word, length $ret;
-        } else {
-            last;
-        }
-    }
+    # TODO need to better match cmavo, this breaks on various cases
+#   my $check_entire = 0;
+#   while ( length $The_Word ) {
+#       my $ret = longest_first_word( $The_Word, $check_entire );
+#       $check_entire = 1;
+#       if ( defined $ret ) {
+#           search( $ret, $Flag_Recurse );
+#           $The_Word = substr $The_Word, length $ret;
+#       } else {
+#           last;
+#       }
+#   }
 
     # maybe it is a lujvo?
     if ( length $The_Word ) {
