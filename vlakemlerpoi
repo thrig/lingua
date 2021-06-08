@@ -1,0 +1,169 @@
+#!/usr/bin/env perl
+#
+# vlakemlerpoi - audit lojban dictionary definitions for spelling errors
+# (there are lots). requires that `aspell` is installed
+
+use 5.28.0;
+use strictures 2;
+use utf8;
+use DBI;
+use IPC::Open2;
+
+my @ASPELL_CMD = qw(aspell list);
+
+my $dbfile = shift // die "Usage: vlakemlerpoi dictonary-database\n";
+my $dbh    = DBI->connect( 'dbi:SQLite:dbname=' . $dbfile,
+    '', '', { AutoCommit => 0, RaiseError => 1, } );
+
+# a native language dictionary will have problems with the lojban
+my %known;
+my $sth = $dbh->prepare(q{SELECT word FROM jbo});
+$sth->execute;
+while ( my $word = $sth->fetchrow_array ) {
+    $known{$word} = 1;
+}
+$sth->finish;
+
+# see EOF for more to ignore
+while ( readline *DATA ) {
+    chomp;
+    $known{$_} = 1;
+}
+
+$sth = $dbh->prepare(q{SELECT word,definition FROM jbo});
+$sth->execute;
+while ( my @ret = $sth->fetchrow_array ) {
+    unless ( length $ret[1] ) {
+        warn "notice: $ret[0] empty definition??\n";
+        next;
+    }
+    my $orig = $ret[1];
+    my ( $word, $def ) = @ret;
+    my @check;
+    my $okay = eval {
+        $def =~ s/\$\S+\$ //g;          # strip the $xa_1=g_1$ slot stuff
+        $def =~ s/''/ /g;               # ''fancy'' quoting
+        $def =~ tr/`{}()",[].\/-/ /;    # crud that masks words
+
+        @check = grep { !exists $known{$_} and !m/[A-Z]/ } split /\s+/, $def;
+        1;
+    };
+    unless ($okay) {
+        no strictures;
+        warn "error: $word cleanup '$orig' failed: def='$def' check='@check'\n";
+        goto BAILOUT;
+    }
+
+    my $pid = open2( my $out, my $in, @ASPELL_CMD );
+    say $in "@check";
+    close $in;
+
+    my %maybe_bad;
+    while ( readline $out ) {
+        chomp;
+        $maybe_bad{$_} = 1;
+    }
+    close $out;
+    waitpid $pid, 0;
+    next unless keys %maybe_bad;
+
+    say "$word - " . join ' ', sort keys %maybe_bad;
+}
+BAILOUT:
+$sth->finish;
+$dbh->disconnect;
+
+# more stuff to ignore -- assumes American English aspell so there may
+# be British English ignores herein
+__DATA__
+abstractor
+achievative
+ack
+affirmer
+agentive
+aleph
+amongst
+aperiodically
+approximant
+ary
+aut
+behaviour
+biconditional
+buddhist
+calendary
+capitalised
+cardinality
+carne
+codomain
+cultivar
+definitional
+demiurge
+dimensionality
+dimensionful
+distributivity
+downvote
+downvotes
+durian
+elephantfish
+elidable
+evidential
+experiencer
+foundational
+gendered
+hydrological
+iff
+inhospitality
+intersexed
+knifefish
+labelled
+leche
+letteral
+lojbanic
+lojbanized
+makefile
+metadata
+morphologically
+multiset
+mythos
+namer
+nongendered
+nullary
+obstruent
+orientable
+paddlefish
+parrotfish
+perfective
+phonation
+pokemon
+postalveolar
+prenex
+qualia
+resultingly
+seadragon
+sqrt
+subfield
+subgenus
+subsentence
+subtaxon
+subunit
+subunits
+supercontinent
+supergroup
+superset
+surjective
+taxa
+taxon
+tetrapod
+thermodymanics
+timestamp
+tuples
+unary
+uninvolved
+unitless
+unordered
+unoriented
+unrounded
+upvote
+upvotes
+vertices
+whitespace
