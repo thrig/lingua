@@ -1,0 +1,38 @@
+#!/usr/bin/env perl
+#
+# a complication motivated by the desire to test each sentence of the
+# prose against camxes (via t/ruins.t) without having to extract said
+# out of a *.tex file
+
+use 5.28.0;
+use warnings;
+
+die "Usage: $0 tex-template prose-file\n" unless @ARGV == 2;
+
+my $tex = shift;
+open my $tfh, '<', $tex or die "could not open '$tex': $!\n";
+
+my $jbo = shift;
+open my $jfh, '<', $jbo or die "could not open '$jbo': $!\n";
+
+while ( readline $tfh ) {
+    if (m/INSERTTEXTHERE/) {
+        die "no filehandle for $jbo??\n" unless $jfh;
+        local $/ = "\n\n";
+        while ( readline $jfh ) {
+            if (m{^\\}) {
+                print "\\\\\n";
+                next;
+            }
+            s/#[^\n]+//g;
+            s/\n/ /g;
+            s/\s{2,}//g;
+            s/\s+$//;
+            print "\n$_" if length;
+        }
+        undef $jfh;
+        #print "\\\\\n";
+        next;
+    }
+    print;
+}

@@ -70,8 +70,6 @@ if ( $lang eq 'en' ) {
         # for sqlite, CLL 3.1 for the other characters
         $The_Word =~ tr/%_',.abcdefgijklmnoprstuvxyz//cd;
     }
-} else {
-    die "mitysisku: unknown language |$lang| (use en|jbo)\n";
 }
 
 my @Lo_Valsi;

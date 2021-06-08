@@ -1,0 +1,71 @@
+\documentclass[ebook,9pt,oneside,onecolumn,openany,final]{memoir}
+
+\setlength{\footskip}{0pt}
+\setulmarginsandblock{90pt}{90pt}{}
+\checkandfixthelayout
+
+\usepackage[no-math]{fontspec}
+\setmainfont{DejaVu Serif}
+
+\usepackage{hyperref}
+\hypersetup{pdftitle={le cukseltai temfesti},%
+            pdftex}
+
+\setlength{\parindent}{0pt}
+\raggedbottom
+\fixpdflayout
+
+% KLUGE need better way to turn off all hyphenation within the lojban
+\hyphenation{tolsnuti vacmurse bifkluza cicricfoi temfesti arteri}
+
+\begin{document}
+
+\title{le cukseltai temfesti}
+
+\begin{titlingpage}
+\null
+\vskip 6em%
+\begin{center}
+\Huge \thetitle
+\vskip 0.06em%
+\hrule
+\end{center}
+\end{titlingpage}
+
+\clearpage
+
+\mainmatter
+
+\frenchspacing
+\normalsize
+
+ni'o la .xorxeluis borxes. pu finti la'e lu le cukseltai temfesti li'u
+fo la'e lo'u je ganai ru de'a senva do gi le'u .i le se finti cu se
+fanva fi le jbobau fu di'e tu'e \\
+
+INSERTTEXTHERE
+
+tu'u fa'o
+
+\clearpage
+\section*{Translation Notes}
+
+Experimental gismu are used though the translation hopefully cleaves to
+what has been called Old High Lojban as seen in the book ``The Complete
+Lojban Language''. There are likely many problems with the Lojban (that
+I am not fluent in) plus errors or distortions caused by the translation
+from Spanish (that I am also not fluent in).
+
+\begin{itemize}
+\item The tense in Lojban does not use ``storytime'' so gets set to the past \textit{puki} then is moved around (usually forward with \textit{ba}) as the character does things. There are likely problems with this.
+\item \textit{desembarcar} became \textit{flukla} as I didn't like \textit{selma'ebi'o} and couldn't find anything better.
+\item \textit{unánime} is tricky; ``sharing the same view'' is one meaning but (spoilers!) the ``one mind'' aspect is relevant. Hard to pun on that in Lojban. \textit{tugysi'u} would be literal; I went with \textit{jundi} which hopefully is keeping to the spirit of things.
+\item \textit{censa derpesxu} would be more literal for \textit{fango sagrado}; instead took the liberty of \textit{latna derpesxu} as the Lotus has mental connotations in traditions both East and West.
+\item \textit{patria} to \textit{jbegu'e} ``birth country'' misses the head of family (or, spoilers, body) aspect.
+\item \textit{el recinto circular que corona un tigre o caballo de piedra}\ldots I am uncertain if the circular part crowns or is crowned by the stone animal.
+\item \textit{rió abajo} became \textit{fa'a le ve rirxe} thanks to \textit{la gleki}; prior to that the Lojban probably said ``under the river''.
+\item \textit{cicuta} got munged to \textit{carmalri'a spati} which hopefully is turn-bad-causing plant after the Greek ``konas'' or ``to whirl'' or what Hemlock (perhaps) is named after.
+\item \textit{en lustros} (minus the religious connotations) became \textit{mumei} though perhaps is nonesense as I've used it.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,2 @@
+requires 'App::Prove';
+requires 'Test2::V0', '>= 0.000060';
