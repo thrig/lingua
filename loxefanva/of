@@ -15,8 +15,8 @@
 \raggedbottom
 \fixpdflayout
 
-% KLUGE need better way to turn off all hyphenation within the lojban
-\hyphenation{tolsnuti vacmurse bifkluza cicricfoi temfesti arteri}
+% no hyphenation as that could corrupt the loj-ban
+\usepackage[none]{hyphenat}
 
 \begin{document}
 
